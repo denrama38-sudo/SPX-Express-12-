@@ -93,6 +93,9 @@
     try {
       app = firebase.initializeApp(firebaseConfig);
       auth = firebase.auth();
+      try {
+        auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+      } catch (e) {}
       db = firebase.firestore();
       try {
         storage = firebase.storage();
