@@ -2,11 +2,13 @@
   "name": "SPX Express 12",
   "short_name": "SPX Express 12",
   "description": "Aplikasi scan barcode & QR code untuk toko",
-  "start_url": "./",
+  "start_url": "./index.html",
+  "scope": "./",
+  "id": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
   "icons": [
     {
       "src": "icon-192.png",
