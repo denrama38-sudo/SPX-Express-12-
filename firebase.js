@@ -173,6 +173,12 @@
     var provider = new firebase.auth.GoogleAuthProvider();
     provider.addScope("profile");
     provider.addScope("email");
+
+    // Paksa muncul pilihan akun setiap kali login
+    provider.setCustomParameters({
+      prompt: 'select_account'
+    });
+
     // Redirect lebih stabil di mobile / PWA daripada popup
     return auth.signInWithRedirect(provider);
   }
@@ -184,6 +190,12 @@
     var provider = new firebase.auth.GoogleAuthProvider();
     provider.addScope("profile");
     provider.addScope("email");
+
+    // Paksa muncul pilihan akun setiap kali login
+    provider.setCustomParameters({
+      prompt: 'select_account'
+    });
+
     return auth.signInWithPopup(provider).then(function (result) {
       currentUser = result.user;
       return ensureUserProfile(result.user).then(function () {
