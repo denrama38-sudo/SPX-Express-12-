@@ -311,6 +311,59 @@
     }, 800);
   }
 
+
+  // ---------- Full app snapshot (backup andal untuk restore multi-device) ----------
+  /**
+   * Simpan seluruh data app ke satu dokumen:
+   * users/{uid}/appData/main
+   * Payload: { scans, recycle, cats, set, riwayat, updatedAt }
+   */
+  async function saveAppData(payload) {
+    var ref = userRef().collection("appData").doc("main");
+    var data = {
+      scans: (payload && payload.scans) ? payload.scans : [],
+      recycle: (payload && payload.recycle) ? payload.recycle : [],
+      cats: (payload && payload.cats) ? payload.cats : [],
+      set: (payload && payload.set) ? payload.set : {},
+      riwayat: (payload && (payload.riwayat || payload.history)) ? (payload.riwayat || payload.history) : [],
+      updatedAt: nowISO(),
+      version: 2
+    };
+    await ref.set(data, { merge: false });
+    // Juga mirror settings ke settings/config (opsional, untuk query terpisah)
+    try {
+      await saveSettings(data.set || {});
+    } catch (e) {}
+    return data;
+  }
+
+  async function loadAppData() {
+    var ref = userRef().collection("appData").doc("main");
+    var snap = await ref.get();
+    if (!snap.exists) return null;
+    var d = snap.data() || {};
+    return {
+      scans: d.scans || [],
+      recycle: d.recycle || [],
+      cats: d.cats || [],
+      set: d.set || {},
+      riwayat: d.riwayat || d.history || [],
+      updatedAt: d.updatedAt || null,
+      version: d.version || 1
+    };
+  }
+
+  function isAppDataEmpty(d) {
+    if (!d) return true;
+    var hasScans = d.scans && d.scans.length;
+    var hasHist = d.riwayat && d.riwayat.length;
+    var hasRec = d.recycle && d.recycle.length;
+    var hasCats = d.cats && d.cats.length;
+    var hasSet = d.set && typeof d.set === "object" && Object.keys(d.set).length > 0;
+    return !(hasScans || hasHist || hasRec || hasCats || hasSet);
+  }
+
+
   global.spxFirebaseData = {
     loadSettings: loadSettings,
     saveSettings: saveSettings,
@@ -329,6 +382,9 @@
     deleteRecycle: deleteRecycle,
     loadAllAccountData: loadAllAccountData,
     migrateLocalToFirestore: migrateLocalToFirestore,
-    scheduleCloudSync: scheduleCloudSync
+    scheduleCloudSync: scheduleCloudSync,
+    saveAppData: saveAppData,
+    loadAppData: loadAppData,
+    isAppDataEmpty: isAppDataEmpty
   };
 })(typeof window !== "undefined" ? window : this);

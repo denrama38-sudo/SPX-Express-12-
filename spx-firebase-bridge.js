@@ -224,15 +224,26 @@
     var label = (user && user.email) || "akun Google";
 
     function doOut() {
-      var p = window.spxFirebase ? window.spxFirebase.signOut() : Promise.resolve();
-      p.then(function () {
-        clearLegacySession();
-        updateFirebaseUI(null);
-        toast("Berhasil keluar");
-        showGoogleLoginOverlay();
-      }).catch(function (e) {
-        toast("Gagal logout: " + (e.message || e));
-      });
+      // Paksa backup terakhir sebelum logout
+      var finish = function () {
+        var pr = window.spxFirebase ? window.spxFirebase.signOut() : Promise.resolve();
+        pr.then(function () {
+          clearLegacySession();
+          updateFirebaseUI(null);
+          toast("Berhasil keluar");
+          showGoogleLoginOverlay();
+        }).catch(function (e) {
+          toast("Gagal logout: " + (e.message || e));
+        });
+      };
+      if (window.spxFirebaseData && window.spxFirebaseData.saveAppData && navigator.onLine) {
+        try {
+          var shape = collectLocalShape();
+          window.spxFirebaseData.saveAppData(shape).then(finish).catch(function () { finish(); });
+          return;
+        } catch (e) {}
+      }
+      finish();
     }
 
     if (typeof showAppConfirm === "function") {
@@ -246,59 +257,163 @@
     }
   };
 
+  function collectLocalShape() {
+    return {
+      scans: (typeof scans !== "undefined" && scans) ? scans : [],
+      recycle: (typeof recycle !== "undefined" && recycle) ? recycle : [],
+      cats: (typeof cats !== "undefined" && cats) ? cats : [],
+      set: (typeof set !== "undefined" && set) ? set : {},
+      riwayat: (typeof riwayat !== "undefined" && riwayat) ? riwayat : []
+    };
+  }
+
+  function localIsEmpty() {
+    try {
+      var shape = collectLocalShape();
+      if (shape.scans && shape.scans.length) return false;
+      if (shape.riwayat && shape.riwayat.length) return false;
+      if (shape.recycle && shape.recycle.length) return false;
+      // cats default punya isi bawaan app — jangan anggap "ada data user"
+      // set default juga ada — cek flag sync
+      return true;
+    } catch (e) {
+      return true;
+    }
+  }
+
+  var cloudPushTimer = null;
+  var cloudPushBusy = false;
+
+  function scheduleFullCloudPush(reason) {
+    if (!window.spxFirebase || !window.spxFirebase.isLoggedIn()) return;
+    if (!window.spxFirebaseData || !window.spxFirebaseData.saveAppData) return;
+    if (!navigator.onLine) return;
+    if (cloudPushTimer) clearTimeout(cloudPushTimer);
+    cloudPushTimer = setTimeout(function () {
+      doFullCloudPush(reason || "save");
+    }, 900);
+  }
+
+  async function doFullCloudPush(reason) {
+    if (cloudPushBusy) return;
+    if (!window.spxFirebase || !window.spxFirebase.isLoggedIn()) return;
+    if (!window.spxFirebaseData || !window.spxFirebaseData.saveAppData) return;
+    if (!navigator.onLine) return;
+    cloudPushBusy = true;
+    var sync = $("spxGSyncStatus");
+    try {
+      var shape = collectLocalShape();
+      await window.spxFirebaseData.saveAppData(shape);
+      localStorage.setItem(KEY_FB_MIGRATED, window.spxFirebase.getUid() || "1");
+      if (sync) {
+        var tstr = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        sync.textContent = "Firebase backup: tersimpan · " + tstr;
+        sync.className = "spx-g-sync on";
+      }
+      console.log("[SPX] cloud push OK", reason);
+    } catch (e) {
+      console.error("[SPX] cloud push fail", e);
+      if (sync) {
+        sync.textContent = "Firebase backup gagal: " + String(e.message || e).slice(0, 40);
+        sync.className = "spx-g-sync err";
+      }
+    } finally {
+      cloudPushBusy = false;
+    }
+  }
+
   async function afterLogin(user) {
     if (!user) return;
+    var sync = $("spxGSyncStatus");
     try {
-      if (!window.spxFirebaseData) return;
-      var localEmpty = true;
-      try {
-        if (typeof scans !== "undefined" && scans && scans.length) localEmpty = false;
-        if (typeof riwayat !== "undefined" && riwayat && riwayat.length) localEmpty = false;
-        if (typeof cats !== "undefined" && cats && cats.length) localEmpty = false;
-      } catch (e) {}
+      if (!window.spxFirebaseData || !window.spxFirebaseData.loadAppData) {
+        console.warn("[SPX] spxFirebaseData.loadAppData tidak ada");
+        return;
+      }
 
-      if (localEmpty) {
-        toast("Memuat data akun dari cloud...");
-        var cloud = await window.spxFirebaseData.loadAllAccountData();
+      if (sync) {
+        sync.textContent = "Firebase: sinkronisasi...";
+        sync.className = "spx-g-sync";
+      }
+
+      // 1) Coba ambil backup cloud
+      var cloud = null;
+      try {
+        cloud = await window.spxFirebaseData.loadAppData();
+      } catch (e) {
+        console.warn("[SPX] loadAppData", e);
+      }
+
+      var cloudEmpty = !cloud || (window.spxFirebaseData.isAppDataEmpty && window.spxFirebaseData.isAppDataEmpty(cloud));
+      var emptyLocal = localIsEmpty();
+
+      if (!cloudEmpty) {
+        // Cloud punya data → restore ke lokal (prioritas setelah clear Chrome)
         applyCloudToLocal(cloud);
-        toast("Data cloud dimuat");
+        toast("Data & setting dipulihkan dari Firebase");
+        if (sync) {
+          sync.textContent = "Firebase: data dipulihkan · " + (user.email || "");
+          sync.className = "spx-g-sync on";
+        }
+        // Pastikan cloud tetap mirror lokal setelah apply
+        scheduleFullCloudPush("after-restore");
+      } else if (!emptyLocal) {
+        // Cloud kosong, lokal ada → upload
+        toast("Menyimpan data ke Firebase...");
+        await doFullCloudPush("first-upload");
+        toast("Data tersimpan di Firebase");
       } else {
-        var migrated = localStorage.getItem(KEY_FB_MIGRATED);
-        if (migrated !== user.uid) {
-          toast("Sinkron data lokal → cloud...");
-          var shape = {
-            scans: typeof scans !== "undefined" ? scans : [],
-            recycle: typeof recycle !== "undefined" ? recycle : [],
-            cats: typeof cats !== "undefined" ? cats : [],
-            set: typeof set !== "undefined" ? set : {},
-            riwayat: typeof riwayat !== "undefined" ? riwayat : []
-          };
-          var report = await window.spxFirebaseData.migrateLocalToFirestore(shape);
-          localStorage.setItem(KEY_FB_MIGRATED, user.uid);
-          toast("Cloud sync: " + (report.scans || 0) + " scan, " + (report.stores || 0) + " toko");
+        // Keduanya kosong
+        if (sync) {
+          sync.textContent = "Firebase: terhubung · siap backup";
+          sync.className = "spx-g-sync on";
         }
       }
     } catch (e) {
       console.warn("afterLogin", e);
+      toast("Sync Firebase gagal — coba lagi nanti");
     }
   }
 
   function applyCloudToLocal(cloud) {
     if (!cloud) return;
     try {
-      if (cloud.scans && cloud.scans.length && typeof scans !== "undefined") scans = cloud.scans;
-      if (cloud.history && cloud.history.length && typeof riwayat !== "undefined") riwayat = cloud.history;
-      if (cloud.recycle && cloud.recycle.length && typeof recycle !== "undefined") recycle = cloud.recycle;
-      if (cloud.stores && cloud.stores.length && typeof cats !== "undefined") {
-        cats = cloud.stores.map(function (s) { return s.name || s.id; });
+      if (Array.isArray(cloud.scans)) {
+        scans = cloud.scans;
       }
-      if (cloud.settings && typeof set !== "undefined") {
-        Object.keys(cloud.settings).forEach(function (k) {
+      if (Array.isArray(cloud.riwayat)) {
+        riwayat = cloud.riwayat;
+      }
+      if (Array.isArray(cloud.recycle)) {
+        recycle = cloud.recycle;
+      }
+      if (Array.isArray(cloud.cats) && cloud.cats.length) {
+        cats = cloud.cats;
+      }
+      if (cloud.set && typeof cloud.set === "object") {
+        // merge ke object set yang ada
+        if (typeof set === "undefined" || !set) {
+          set = {};
+        }
+        Object.keys(cloud.set).forEach(function (k) {
           if (k === "updatedAt") return;
-          set[k] = cloud.settings[k];
+          set[k] = cloud.set[k];
         });
       }
-      if (typeof save === "function") save();
+      if (typeof save === "function") {
+        // simpan lokal tanpa memicu push berulang terlalu cepat
+        var hooked = save._spxFbHooked;
+        var orig = save;
+        // panggil storage langsung
+        try {
+          localStorage.setItem("sn1", JSON.stringify(scans));
+          localStorage.setItem("sn2", JSON.stringify(recycle));
+          localStorage.setItem("sn3", JSON.stringify(cats));
+          localStorage.setItem("sn4", JSON.stringify(set));
+          localStorage.setItem("sn5", JSON.stringify(riwayat));
+        } catch (e) {}
+        if (typeof stat === "function") stat();
+      }
       if (typeof fill === "function") fill();
       if (typeof perToko === "function") perToko();
       if (typeof sw === "function") sw();
@@ -315,10 +430,7 @@
     save = function () {
       var r = orig.apply(this, arguments);
       try {
-        if (window.spxFirebase && window.spxFirebase.isLoggedIn() && window.spxFirebaseData && navigator.onLine) {
-          var s = typeof set !== "undefined" ? set : {};
-          window.spxFirebaseData.saveSettings(s).catch(function () {});
-        }
+        scheduleFullCloudPush("save");
       } catch (e) {}
       return r;
     };
