@@ -1292,6 +1292,17 @@ body.spx-google-locked #spxGoogleLogin{visibility:visible !important;pointer-eve
         <span class="mt">Link Tolakan Seller</span>
         <span class="ms">Akses link tolakan seller</span>
       </button>
+
+      <!-- Buka app terinstall di HP (via SpxNative) — TIDAK ke Play Store -->
+      <button type="button" class="menu-tile" onclick="spxOpenApp('darksacor.reactiontime')">
+        <svg class="mi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M12 7v5l3 2"/>
+          <path d="M8 16h8"/>
+        </svg>
+        <span class="mt">Reaction Time</span>
+        <span class="ms">Buka aplikasi</span>
+      </button>
     </div>
   </div>
 
@@ -1717,6 +1728,24 @@ function shareTolakanSeller(){
   }catch(e){
     try{ window.open(url,"_blank"); }catch(e2){}
   }
+}
+
+/** Buka aplikasi yang sudah terinstall di HP (via JavascriptInterface SpxNative).
+ *  Contoh: spxOpenApp('darksacor.reactiontime')
+ *  TIDAK membuka Play Store. Kalau app belum terinstall → Toast dari native.
+ */
+function spxOpenApp(packageName){
+  try{
+    if(window.SpxNative && typeof window.SpxNative.openApp === "function"){
+      window.SpxNative.openApp(String(packageName || "").trim());
+      return;
+    }
+  }catch(e){}
+  // Fallback kalau bukan di WebView Android / interface belum ada
+  try{
+    if(typeof toast === "function") toast("Hanya tersedia di aplikasi Android");
+    else alert("Hanya tersedia di aplikasi Android\nPackage: " + packageName);
+  }catch(e2){}
 }
 
 function openScan(){
