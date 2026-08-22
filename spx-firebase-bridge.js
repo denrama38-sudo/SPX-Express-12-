@@ -182,24 +182,29 @@
       console.error("login fail", e);
       if (st) st.textContent = "";
       var msg = (e && (e.message || e.code)) || "gagal";
-      if (String(msg).indexOf("popup-closed") >= 0 || String(msg).indexOf("cancelled") >= 0) {
+      var low = String(msg).toLowerCase();
+      if (low.indexOf("popup-closed") >= 0 || low.indexOf("cancelled") >= 0 || low.indexOf("user-cancelled") >= 0) {
         if (err) { err.textContent = "Login dibatalkan"; err.style.display = "block"; }
+        return;
+      }
+      if (low.indexOf("missing initial state") >= 0 || low.indexOf("sessionstorage") >= 0) {
+        if (err) {
+          err.textContent = "Sesi login rusak. Tutup app sepenuhnya lalu buka lagi.";
+          err.style.display = "block";
+        }
+        toast("Tutup app & buka lagi");
         return;
       }
       if (err) { err.textContent = "Gagal masuk: " + msg; err.style.display = "block"; }
       toast("Login gagal");
     }
 
+    // Hanya pakai Popup — JANGAN fallback ke Redirect (bikin error missing initial state di WebView)
     window.spxFirebase.signInWithGoogle()
       .then(onSuccess)
       .catch(function (e1) {
         console.warn("popup gagal", e1);
-        if (st) st.textContent = "Mencoba metode lain...";
-        if (window.spxFirebase.signInWithGoogleRedirect) {
-          window.spxFirebase.signInWithGoogleRedirect().catch(onFail);
-        } else {
-          onFail(e1);
-        }
+        onFail(e1);
       });
   };
 
