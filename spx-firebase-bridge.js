@@ -107,8 +107,14 @@
   }
 
   function showGoogleLoginOverlay() {
-    // Gate full-screen dihapus — login hanya dari Pengaturan
-    hideGoogleLoginOverlay();
+    // Boleh ditampilkan dari Pengaturan (user sadar minta login)
+    var sc = $("spxGoogleLogin");
+    if (!sc) return;
+    document.body.classList.add("spx-google-locked");
+    sc.classList.add("spx-show");
+    try { sc.style.setProperty("display", "flex", "important"); } catch (e) { sc.style.display = "flex"; }
+    sc.style.visibility = "visible";
+    sc.style.pointerEvents = "auto";
   }
 
   function enterApp(user) {
@@ -588,10 +594,8 @@
       }
     } catch (e) {}
 
-    // Selalu tutup overlay gate
-    setInterval(function () {
-      hideGoogleLoginOverlay();
-    }, 1000);
+    // Jangan auto-hide overlay — user bisa buka dari Pengaturan
+    // Setelah login sukses, enterApp/hideGoogleLoginOverlay yang menutup.
 
     if (!window.spxFirebase) {
       console.warn("[Bridge] spxFirebase belum ada");

@@ -1075,8 +1075,8 @@ body.spx-google-locked #spxGoogleLogin{visibility:visible !important;pointer-eve
     <div class="spx-g-hint-swipe">Geser logo Google ke kanan untuk masuk</div>
     <div class="spx-g-status" id="spxGoogleStatus"></div>
     <div class="spx-g-err" id="spxGoogleError">Gagal masuk. Coba lagi.</div>
-    <button type="button" id="spxSkipGoogleBtn" style="margin-top:18px;padding:12px 20px;border:1px solid #ff6a00;border-radius:12px;background:transparent;color:#ff6a00;font-size:14px;font-weight:600;width:100%;">
-      Masuk Tanpa Google (Sementara)
+    <button type="button" id="spxCloseGoogleBtn" style="margin-top:18px;padding:12px 20px;border:1px solid #64748b;border-radius:12px;background:transparent;color:#94a3b8;font-size:14px;font-weight:600;width:100%;">
+      Batal / Kembali
     </button>
   </div>
 </div>
@@ -5131,8 +5131,18 @@ try{ genRenderFields(); }catch(e){}
   }
 
   function showGoogleLogin(){
-    // Gate full-screen DINONAKTIFKAN — login hanya di Pengaturan
-    return;
+    // Dipakai dari Pengaturan (bukan gate otomatis di startup)
+    var sc = $("spxGoogleLogin");
+    if(!sc) return;
+    document.body.classList.add("spx-google-locked");
+    sc.classList.add("spx-show");
+    try{ sc.style.setProperty("display","flex","important"); }catch(e){ sc.style.display="flex"; }
+    sc.style.visibility = "visible";
+    sc.style.pointerEvents = "auto";
+    var err = $("spxGoogleError");
+    if(err){ err.style.display = "none"; err.textContent = ""; }
+    var st = $("spxGoogleStatus");
+    if(st) st.textContent = "";
   }
   function hideGoogleLogin(){
     var sc = $("spxGoogleLogin");
@@ -5192,14 +5202,14 @@ try{ genRenderFields(); }catch(e){}
 
   // Login dari Pengaturan (bukan gate full-screen)
   window.spxLoginFromSettings = function(){
+    // Tampilkan overlay swipe Google dulu
+    try{ showGoogleLogin(); }catch(e){}
+    try{ if(typeof toast==="function") toast("Geser logo Google ke kanan untuk masuk"); }catch(e){}
+    // Pastikan status bersih
     try{
-      if(typeof toast==="function") toast("Membuka Google Login...");
+      var st=$("spxGoogleStatus"); if(st) st.textContent="";
+      var err=$("spxGoogleError"); if(err){ err.style.display="none"; err.textContent=""; }
     }catch(e){}
-    if(typeof window.spxGoogleSignIn === "function"){
-      window.spxGoogleSignIn();
-    } else {
-      try{ if(typeof toast==="function") toast("Modul login belum siap — coba lagi"); }catch(e){}
-    }
   };
 
   function initTokenClient(){
@@ -5865,22 +5875,18 @@ try{ genRenderFields(); }catch(e){}
 
 
 <script>
-/* Gate Google Login dihapus — overlay full-screen selalu disembunyikan.
-   Login/logout hanya dari menu Pengaturan. */
+/* Gate startup dihapus. Overlay boleh muncul HANYA jika user buka dari Pengaturan
+   (ada class spx-show). Jangan paksa-hide terus-menerus. */
 (function(){
-  function forceHideLoginGate(){
+  window.spxForceHideLogin = function(){
     var sc=document.getElementById("spxGoogleLogin");
+    if(sc && sc.classList.contains("spx-show")) return; // user sedang login
     if(sc){
       sc.classList.remove("spx-show");
       try{ sc.style.setProperty("display","none","important"); }catch(e){ sc.style.display="none"; }
-      sc.style.visibility="hidden";
-      sc.style.pointerEvents="none";
     }
     try{ document.body.classList.remove("spx-google-locked"); }catch(e){}
-  }
-  forceHideLoginGate();
-  setInterval(forceHideLoginGate, 800);
-  window.spxForceHideLogin = forceHideLoginGate;
+  };
 })();
 </script>
 
@@ -5911,6 +5917,25 @@ try{ genRenderFields(); }catch(e){}
   }
   setTimeout(bindSkip, 500);
   setTimeout(bindSkip, 2000);
+})();
+</script>
+
+
+<script>
+(function(){
+  function bindCloseGoogle(){
+    var b=document.getElementById("spxCloseGoogleBtn");
+    if(!b || b._bound) return;
+    b._bound=1;
+    b.onclick=function(){
+      try{ if(typeof hideGoogleLogin==="function") hideGoogleLogin(); }catch(e){}
+      var sc=document.getElementById("spxGoogleLogin");
+      if(sc){ sc.classList.remove("spx-show"); sc.style.display="none"; }
+      document.body.classList.remove("spx-google-locked");
+    };
+  }
+  setTimeout(bindCloseGoogle, 400);
+  setTimeout(bindCloseGoogle, 1500);
 })();
 </script>
 
