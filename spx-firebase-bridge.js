@@ -258,6 +258,8 @@
           try {
             localStorage.setItem("spxexp12_v2_login_pending", "1");
           } catch (e) {}
+          // Tutup overlay agar WebView fokusus ke halaman Google
+          setTimeout(function () { hideGoogleLoginOverlay(); }, 300);
           if (window.spxFirebase && window.spxFirebase.signInWithGoogle) {
             window.spxFirebase.signInWithGoogle().catch(function (e2) {
               console.error("redirect fail", e2);
@@ -631,21 +633,48 @@
 
     window.spxFirebase.waitAuthReady().then(function (user) {
       hideSplash();
-      hideGoogleLoginOverlay();
+
+      var pending = false;
+      try { pending = localStorage.getItem("spxexp12_v2_login_pending") === "1"; } catch (e) {}
 
       if (user) {
+        try { localStorage.removeItem("spxexp12_v2_login_pending"); } catch (e) {}
         markLoginOk();
         mirrorSessionForLegacy(user);
+        hideGoogleLoginOverlay();
         updateFirebaseUI(user);
         installSaveHook();
+        if (pending) toast("Login Google berhasil — data disinkronkan");
         setTimeout(function () { afterLogin(user); }, 600);
+        try { if (typeof updateSettingsCard === "function") updateSettingsCard(); } catch (e) {}
+        return;
+      }
+
+      updateFirebaseUI(null);
+      if (pending) {
+        // Redirect selesai tapi user null = login gagal / dibatalkan
+        try { localStorage.removeItem("spxexp12_v2_login_pending"); } catch (e) {}
+        hideGoogleLoginOverlay();
+        toast("Login Google gagal atau dibatalkan. Coba lagi dari Pengaturan.");
       } else {
-        updateFirebaseUI(null);
-        // TIDAK buka login gate — user login manual di Pengaturan
+        hideGoogleLoginOverlay();
       }
     }).catch(function () {
       hideGoogleLoginOverlay();
     });
+
+    // Dipanggil dari MainActivity saat halaman app selesai load
+    window.spxOnAppPageReady = function () {
+      try {
+        if (window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()) {
+          markLoginOk();
+          mirrorSessionForLegacy(window.spxFirebase.currentUser);
+          hideGoogleLoginOverlay();
+          updateFirebaseUI(window.spxFirebase.currentUser);
+          if (typeof updateSettingsCard === "function") updateSettingsCard();
+        }
+      } catch (e) {}
+    };
 
     window.spxFirebase.onAuth(function (user) {
       if (user) {
