@@ -12,7 +12,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://accounts.google.com/gsi/client"></script>
 <style>
 body{margin:0;font-family:sans-serif;background:#0a0a0a;color:#f1f5f9;padding-bottom:80px}
 header{padding:14px 16px;background:#121212;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10;border-bottom:1px solid #2a2a2a}
@@ -1029,7 +1029,7 @@ body.spx-google-locked #spxGoogleLogin{visibility:visible !important;pointer-eve
 
 
 <script>
-/* Alur: Splash → Aktivasi (hanya pertama kali) → Login Google → App. Tanpa welcome. */
+/* Alur: Splash → Aktivasi (hanya pertama kali) → App. Login Google hanya di Pengaturan. */
 (function(){
   try{
     if(localStorage.getItem("spxexp12_v2_on")==="1"){
@@ -1039,23 +1039,16 @@ body.spx-google-locked #spxGoogleLogin{visibility:visible !important;pointer-eve
         lock.style.display="none";
       }
       document.body.classList.remove("spx-locked");
-      // Cegah flash home
-      var hasSesi=false;
+      // Login Google TIDAK wajib di awal — langsung app setelah aktivasi
+      // (login/logout hanya di Pengaturan untuk sync cloud)
       try{
-        hasSesi = localStorage.getItem("spxexp12_v2_login_ok")==="1"
-          || localStorage.getItem("spxexp12_v2_fb_session")==="1"
-          || (localStorage.getItem("spxexp12_v2_gtoken")||"").indexOf("firebase-session:")===0;
-      }catch(e2){}
-      if(hasSesi){
-        window.__spxLoginOk = true;
-      } else {
         var gl=document.getElementById("spxGoogleLogin");
         if(gl){
-          document.body.classList.add("spx-google-locked");
-          gl.classList.add("spx-show");
-          gl.style.display="flex";
+          gl.classList.remove("spx-show");
+          gl.style.display="none";
         }
-      }
+        document.body.classList.remove("spx-google-locked");
+      }catch(e2){}
     }
   }catch(e){}
 })();
@@ -1082,7 +1075,7 @@ body.spx-google-locked #spxGoogleLogin{visibility:visible !important;pointer-eve
     <div class="spx-g-hint-swipe">Geser logo Google ke kanan untuk masuk</div>
     <div class="spx-g-status" id="spxGoogleStatus"></div>
     <div class="spx-g-err" id="spxGoogleError">Gagal masuk. Coba lagi.</div>
-    <button type="button" id="spxSkipGoogleBtn_DISABLED" style="display:none!important" style="margin-top:18px;padding:12px 20px;border:1px solid #ff6a00;border-radius:12px;background:transparent;color:#ff6a00;font-size:14px;font-weight:600;width:100%;">
+    <button type="button" id="spxSkipGoogleBtn" style="margin-top:18px;padding:12px 20px;border:1px solid #ff6a00;border-radius:12px;background:transparent;color:#ff6a00;font-size:14px;font-weight:600;width:100%;">
       Masuk Tanpa Google (Sementara)
     </button>
   </div>
@@ -5131,25 +5124,8 @@ try{ genRenderFields(); }catch(e){}
   }
 
   function showGoogleLogin(){
-    // Gate tunggal: kalau sudah login, JANGAN tampil
-    try{
-      if(window.__spxLoginOk) return;
-      if(localStorage.getItem("spxexp12_v2_login_ok")==="1"){ window.__spxLoginOk=true; return; }
-      if(window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()){
-        window.__spxLoginOk=true;
-        try{ localStorage.setItem("spxexp12_v2_login_ok","1"); }catch(e){}
-        return;
-      }
-    }catch(e){}
-    var sc = $("spxGoogleLogin");
-    if(!sc) return;
-    document.body.classList.add("spx-google-locked");
-    sc.classList.add("spx-show");
-    try{ sc.style.setProperty("display","flex","important"); }catch(e){ sc.style.display="flex"; }
-    var err = $("spxGoogleError");
-    if(err) err.style.display = "none";
-    var st = $("spxGoogleStatus");
-    if(st) st.textContent = "";
+    // Gate full-screen DINONAKTIFKAN — login hanya di Pengaturan
+    return;
   }
   function hideGoogleLogin(){
     var sc = $("spxGoogleLogin");
@@ -5178,7 +5154,15 @@ try{ genRenderFields(); }catch(e){}
     var emailEl = $("spxGEmail");
     var av = $("spxGAvatar");
     var sync = $("spxGSyncStatus");
-    var btn = $("spxGoogleLogoutBtn");
+    var btnOut = $("spxGoogleLogoutBtn");
+    var btnIn = $("spxGoogleLoginBtn");
+    // Juga cek Firebase user
+    try{
+      if((!u || !u.email) && window.spxFirebase && window.spxFirebase.currentUser){
+        var fu = window.spxFirebase.currentUser;
+        u = { name: fu.displayName || "Pengguna", email: fu.email || "", picture: fu.photoURL || "" };
+      }
+    }catch(e){}
     if(u && u.email){
       if(nameEl) nameEl.textContent = u.name || "Pengguna Google";
       if(emailEl) emailEl.textContent = u.email;
@@ -5186,16 +5170,30 @@ try{ genRenderFields(); }catch(e){}
         if(u.picture){ av.src = u.picture; av.style.display = "block"; }
         else av.style.display = "none";
       }
-      if(sync){ sync.textContent = "Backup real-time: aktif · " + (u.email||""); sync.className = "spx-g-sync on"; }
-      if(btn) btn.style.display = "block";
+      if(sync){ sync.textContent = "Cloud sync aktif · " + (u.email||""); sync.className = "spx-g-sync on"; }
+      if(btnOut) btnOut.style.display = "block";
+      if(btnIn) btnIn.style.display = "none";
     } else {
       if(nameEl) nameEl.textContent = "Belum masuk";
       if(emailEl) emailEl.textContent = "—";
       if(av) av.style.display = "none";
-      if(sync){ sync.textContent = "Backup real-time: menunggu login"; sync.className = "spx-g-sync"; }
-      if(btn) btn.style.display = "none";
+      if(sync){ sync.textContent = "Backup lokal aktif · Login Google opsional untuk sync cloud"; sync.className = "spx-g-sync"; }
+      if(btnOut) btnOut.style.display = "none";
+      if(btnIn) btnIn.style.display = "block";
     }
   }
+
+  // Login dari Pengaturan (bukan gate full-screen)
+  window.spxLoginFromSettings = function(){
+    try{
+      if(typeof toast==="function") toast("Membuka Google Login...");
+    }catch(e){}
+    if(typeof window.spxGoogleSignIn === "function"){
+      window.spxGoogleSignIn();
+    } else {
+      try{ if(typeof toast==="function") toast("Modul login belum siap — coba lagi"); }catch(e){}
+    }
+  };
 
   function initTokenClient(){
     if(typeof google === "undefined" || !google.accounts || !google.accounts.oauth2) return false;
@@ -5349,8 +5347,8 @@ try{ genRenderFields(); }catch(e){}
     window.__spxLoginOk = false;
     setUser(null);
     updateSettingsCard();
+    hideGoogleLogin();
     try{ if(typeof toast === "function") toast("Berhasil keluar dari akun Google"); }catch(e){}
-    showGoogleLogin();
   }
 
   function getAccessTokenSync(){
@@ -5552,57 +5550,23 @@ try{ genRenderFields(); }catch(e){}
 
   function afterActivationCheck(){
     if(!isActivated()) return;
-    if(activationHandled && hasGoogleSession()) return;
-    if(activationHandled && !hasGoogleSession()) return;
+    if(activationHandled) return;
 
     activationHandled = true;
     hideSplash();
-
-    // Firebase sudah login → jangan buka login / Drive OAuth lagi
+    // TIDAK ada gate Google Login — langsung app
+    hideGoogleLogin();
+    updateSettingsCard();
     try{
       if(window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()){
-        hideGoogleLogin();
-        updateSettingsCard();
+        installSaveHook();
         return;
       }
       var tok0 = localStorage.getItem(KEY_G_TOKEN)||"";
-      if(tok0.indexOf("firebase-session:")===0){
-        hideGoogleLogin();
-        updateSettingsCard();
-        return;
+      if(tok0.indexOf("firebase-session:")===0 || hasGoogleSession()){
+        installSaveHook();
       }
     }catch(e){}
-
-    if(hasGoogleSession()){
-      accessToken = localStorage.getItem(KEY_G_TOKEN);
-      // Token Firebase dummy → jangan backup Drive
-      if(accessToken && accessToken.indexOf("firebase-session:")===0){
-        hideGoogleLogin();
-        updateSettingsCard();
-        return;
-      }
-      hideGoogleLogin();
-      updateSettingsCard();
-      installSaveHook();
-      setTimeout(function(){ doGoogleBackup(); }, 1500);
-    } else {
-      // HANYA bridge yang boleh buka login — cegah double-trigger / loop
-      setTimeout(function(){
-        try{
-          if(window.__spxLoginOk || localStorage.getItem("spxexp12_v2_login_ok")==="1"){
-            hideGoogleLogin();
-            return;
-          }
-          if(window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()){
-            window.__spxLoginOk = true;
-            localStorage.setItem("spxexp12_v2_login_ok","1");
-            hideGoogleLogin();
-            return;
-          }
-        }catch(e){}
-        // Jangan panggil showGoogleLogin di sini — biar bridge saja
-      }, 800);
-    }
   }
 
   function watchActivation(){
@@ -5894,18 +5858,10 @@ try{ genRenderFields(); }catch(e){}
 
 
 <script>
-/* PENJAGA: sudah login → overlay Google TIDAK boleh muncul lagi */
+/* Gate Google Login dihapus — overlay full-screen selalu disembunyikan.
+   Login/logout hanya dari menu Pengaturan. */
 (function(){
-  function forceHideLogin(){
-    var ok=false;
-    try{
-      ok = window.__spxLoginOk===true
-        || localStorage.getItem("spxexp12_v2_login_ok")==="1"
-        || (window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn());
-    }catch(e){}
-    if(!ok) return;
-    window.__spxLoginOk = true;
-    try{ localStorage.setItem("spxexp12_v2_login_ok","1"); }catch(e){}
+  function forceHideLoginGate(){
     var sc=document.getElementById("spxGoogleLogin");
     if(sc){
       sc.classList.remove("spx-show");
@@ -5915,8 +5871,39 @@ try{ genRenderFields(); }catch(e){}
     }
     try{ document.body.classList.remove("spx-google-locked"); }catch(e){}
   }
-  setInterval(forceHideLogin, 500);
-  window.spxForceHideLogin = forceHideLogin;
+  forceHideLoginGate();
+  setInterval(forceHideLoginGate, 800);
+  window.spxForceHideLogin = forceHideLoginGate;
+})();
+</script>
+
+
+<script>
+(function(){
+  function bindSkip(){
+    var b=document.getElementById("spxSkipGoogleBtn");
+    if(!b || b._bound) return;
+    b._bound=1;
+    b.onclick=function(){
+      try{
+        window.__spxLoginOk=true;
+        localStorage.setItem("spxexp12_v2_login_ok","1");
+        localStorage.setItem("spxexp12_v2_guser", JSON.stringify({name:"Pengguna",email:"",sub:"local-skip"}));
+        localStorage.setItem("spxexp12_v2_gtoken","firebase-session:local-skip");
+        localStorage.setItem("spxexp12_v2_fb_session","1");
+      }catch(e){}
+      var sc=document.getElementById("spxGoogleLogin");
+      if(sc){
+        sc.classList.remove("spx-show");
+        sc.style.display="none";
+      }
+      document.body.classList.remove("spx-google-locked");
+      try{ if(typeof go==="function") go("home"); }catch(e){}
+      try{ if(typeof toast==="function") toast("Masuk tanpa Google"); }catch(e){}
+    };
+  }
+  setTimeout(bindSkip, 500);
+  setTimeout(bindSkip, 2000);
 })();
 </script>
 

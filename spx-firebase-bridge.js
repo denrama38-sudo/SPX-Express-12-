@@ -107,27 +107,8 @@
   }
 
   function showGoogleLoginOverlay() {
-    // SUDAH LOGIN → jangan pernah tampilkan lagi
-    if (isLoginOk()) {
-      hideGoogleLoginOverlay();
-      return;
-    }
-    try {
-      if (window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()) {
-        markLoginOk();
-        mirrorSessionForLegacy(window.spxFirebase.currentUser);
-        hideGoogleLoginOverlay();
-        return;
-      }
-    } catch (e) {}
-
-    var sc = $("spxGoogleLogin");
-    if (!sc) return;
-    document.body.classList.add("spx-google-locked");
-    sc.classList.add("spx-show");
-    try { sc.style.setProperty("display", "flex", "important"); } catch (e) { sc.style.display = "flex"; }
-    sc.style.visibility = "visible";
-    sc.style.pointerEvents = "auto";
+    // Gate full-screen dihapus — login hanya dari Pengaturan
+    hideGoogleLoginOverlay();
   }
 
   function enterApp(user) {
@@ -227,63 +208,94 @@
       if (st) st.textContent = "";
       enterApp(null);
       toast("Masuk sebagai " + ((profile && profile.email) || (profile && profile.name) || "Google"));
+      // Sync cloud setelah login dari Pengaturan (jika Firebase siap)
+      try {
+        if (window.spxFirebase && window.spxFirebase.currentUser) {
+          setTimeout(function () { afterLogin(window.spxFirebase.currentUser); }, 500);
+        }
+      } catch (e) {}
+    }
+
+    function loadGsiScript(cb) {
+      if (typeof google !== "undefined" && google.accounts && google.accounts.oauth2) {
+        cb(true);
+        return;
+      }
+      if (!document.querySelector('script[data-spx-gsi="1"]')) {
+        var s = document.createElement("script");
+        s.src = "https://accounts.google.com/gsi/client";
+        s.async = true;
+        s.setAttribute("data-spx-gsi", "1");
+        document.head.appendChild(s);
+      }
+      var n = 0;
+      var iv = setInterval(function () {
+        n++;
+        if (typeof google !== "undefined" && google.accounts && google.accounts.oauth2) {
+          clearInterval(iv);
+          cb(true);
+        } else if (n >= 50) {
+          clearInterval(iv);
+          cb(false);
+        }
+      }, 200);
     }
 
     function tryGisTokenLogin() {
-      // Google Identity Services — lebih stabil di Android WebView
-      if (typeof google === "undefined" || !google.accounts || !google.accounts.oauth2) {
-        if (err) {
-          err.textContent = "Google script belum siap. Cek internet, tutup & buka app lagi.";
-          err.style.display = "block";
-        }
-        if (st) st.textContent = "";
-        return;
-      }
-      if (st) st.textContent = "Memilih akun Google...";
-      try {
-        var client = google.accounts.oauth2.initTokenClient({
-          client_id: "298099761518-37i2is5l1vjk904ogrfjt687v7vfss7i.apps.googleusercontent.com",
-          scope: "openid email profile",
-          callback: function (resp) {
-            if (!resp || resp.error) {
-              if (st) st.textContent = "";
-              if (err) {
-                err.textContent = "Login dibatalkan / gagal: " + ((resp && resp.error) || "");
-                err.style.display = "block";
-              }
-              return;
-            }
-            var token = resp.access_token;
-            if (!token) {
-              if (st) st.textContent = "";
-              if (err) { err.textContent = "Token Google kosong"; err.style.display = "block"; }
-              return;
-            }
-            if (st) st.textContent = "Mengambil profil...";
-            fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-              headers: { Authorization: "Bearer " + token }
-            })
-              .then(function (r) { return r.json(); })
-              .then(function (profile) {
-                finishLocalUser(profile);
-                // Coba hubungkan Firebase di background (opsional)
-                tryLinkFirebase(resp);
-              })
-              .catch(function () {
-                // Tetap masuk meski profil gagal
-                finishLocalUser({ name: "Pengguna Google", email: "", sub: "gis-" + Date.now() });
-              });
+      if (st) st.textContent = "Menyiapkan Google...";
+      loadGsiScript(function (ok) {
+        if (!ok) {
+          if (st) st.textContent = "";
+          if (err) {
+            err.innerHTML = "Google script belum siap di WebView.<br>Pastikan internet aktif, atau tekan tombol di bawah.";
+            err.style.display = "block";
           }
-        });
-        client.requestAccessToken({ prompt: "select_account" });
-      } catch (e) {
-        console.error("GIS login", e);
-        if (st) st.textContent = "";
-        if (err) {
-          err.textContent = "Gagal buka Google: " + (e.message || e);
-          err.style.display = "block";
+          return;
         }
-      }
+        if (st) st.textContent = "Memilih akun Google...";
+        try {
+          var client = google.accounts.oauth2.initTokenClient({
+            client_id: "298099761518-37i2is5l1vjk904ogrfjt687v7vfss7i.apps.googleusercontent.com",
+            scope: "openid email profile",
+            callback: function (resp) {
+              if (!resp || resp.error) {
+                if (st) st.textContent = "";
+                if (err) {
+                  err.textContent = "Login dibatalkan / gagal";
+                  err.style.display = "block";
+                }
+                return;
+              }
+              var token = resp.access_token;
+              if (!token) {
+                if (st) st.textContent = "";
+                if (err) { err.textContent = "Token Google kosong"; err.style.display = "block"; }
+                return;
+              }
+              if (st) st.textContent = "Mengambil profil...";
+              fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+                headers: { Authorization: "Bearer " + token }
+              })
+                .then(function (r) { return r.json(); })
+                .then(function (profile) {
+                  finishLocalUser(profile);
+                  tryLinkFirebase(resp);
+                })
+                .catch(function () {
+                  finishLocalUser({ name: "Pengguna Google", email: "", sub: "gis-" + Date.now() });
+                });
+            }
+          });
+          client.requestAccessToken({ prompt: "select_account" });
+        } catch (e) {
+          console.error("GIS login", e);
+          if (st) st.textContent = "";
+          if (err) {
+            err.textContent = "Gagal buka Google: " + (e.message || e);
+            err.style.display = "block";
+          }
+        }
+      });
     }
 
     function tryLinkFirebase(tokenResp) {
@@ -343,14 +355,13 @@
           clearLegacySession();
           clearLoginOk();
           updateFirebaseUI(null);
-          toast("Berhasil keluar");
-          showGoogleLoginOverlay();
+          hideGoogleLoginOverlay();
+          toast("Berhasil keluar — data lokal tetap ada");
         }).catch(function (e) {
-          // Tetap clear lokal meski signOut gagal
           clearLegacySession();
           clearLoginOk();
           updateFirebaseUI(null);
-          showGoogleLoginOverlay();
+          hideGoogleLoginOverlay();
           toast("Keluar (lokal)");
         });
       };
@@ -563,22 +574,26 @@
   // ===== BOOT — alur tunggal, tanpa loop =====
   function bootBridge() {
     hideSplash();
+    hideGoogleLoginOverlay();
 
-    // Penjaga: kalau sudah login, overlay Google selalu ditutup
-    setInterval(function () {
-      if (isLoginOk()) {
-        hideGoogleLoginOverlay();
+    // Preload Google script (untuk login di Pengaturan)
+    try {
+      if (!(typeof google !== "undefined" && google.accounts)) {
+        var s = document.createElement("script");
+        s.src = "https://accounts.google.com/gsi/client";
+        s.async = true;
+        s.setAttribute("data-spx-gsi", "1");
+        document.head.appendChild(s);
       }
-    }, 500);
+    } catch (e) {}
+
+    // Selalu tutup overlay gate
+    setInterval(function () {
+      hideGoogleLoginOverlay();
+    }, 1000);
 
     if (!window.spxFirebase) {
       console.warn("[Bridge] spxFirebase belum ada");
-      // Tanpa Firebase: jika flag login ada → home, else login
-      if (isLoginOk()) {
-        enterApp(null);
-      } else if (isActivated()) {
-        showGoogleLoginOverlay();
-      }
       return;
     }
 
@@ -590,41 +605,33 @@
 
     window.spxFirebase.waitAuthReady().then(function (user) {
       hideSplash();
+      hideGoogleLoginOverlay();
 
       if (user) {
-        // Firebase bilang sudah login → masuk app
-        enterApp(user);
+        markLoginOk();
+        mirrorSessionForLegacy(user);
+        updateFirebaseUI(user);
         installSaveHook();
         setTimeout(function () { afterLogin(user); }, 600);
-        return;
-      }
-
-      // Firebase bilang BELUM login
-      if (isLoginOk()) {
-        // Flag lokal bilang sudah pernah login → TETAP di home
-        // (jangan clear, jangan buka login — itu penyebab loop)
-        enterApp(null);
-        return;
-      }
-
-      // Benar-benar belum pernah login
-      updateFirebaseUI(null);
-      if (isActivated()) {
-        showGoogleLoginOverlay();
+      } else {
+        updateFirebaseUI(null);
+        // TIDAK buka login gate — user login manual di Pengaturan
       }
     }).catch(function () {
-      if (isLoginOk()) enterApp(null);
-      else if (isActivated()) showGoogleLoginOverlay();
+      hideGoogleLoginOverlay();
     });
 
     window.spxFirebase.onAuth(function (user) {
       if (user) {
-        // Login / restore sukses
-        enterApp(user);
+        markLoginOk();
+        mirrorSessionForLegacy(user);
+        updateFirebaseUI(user);
         installSaveHook();
+        // Sync data setelah login dari Pengaturan
+        setTimeout(function () { afterLogin(user); }, 400);
+      } else {
+        updateFirebaseUI(null);
       }
-      // Jika user null: JANGAN buka login, JANGAN clear sesi
-      // (bisa race saat restore; hanya logout manual yang clear)
     });
 
     setTimeout(installSaveHook, 1000);
