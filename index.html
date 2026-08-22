@@ -111,15 +111,15 @@ header b{font-size:1.1rem;color:#fff}
 .hero-scan-btn .hero-sub{display:block;font-size:8px;font-weight:500;color:#f5a66a;opacity:.9}
 .home-menu{
   display:grid;
-  grid-template-columns:1fr 1fr 1fr 1fr;
-  gap:8px;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:10px;
   margin-bottom:8px;
 }
 .home-menu .menu-tile{
   width:100%;
   margin:0;
-  min-height:96px;
-  padding:10px 4px 8px;
+  min-height:108px;
+  padding:14px 8px 12px;
   border:1px solid #2a2a2a;
   border-radius:16px;
   background:#141414;
@@ -137,8 +137,8 @@ header b{font-size:1.1rem;color:#fff}
 .home-menu .menu-tile .mi{
   width:28px;height:28px;color:#ff6a00;display:block;
 }
-.home-menu .menu-tile .mt{font-size:11px;font-weight:700;text-align:center;line-height:1.15;color:#fff}
-.home-menu .menu-tile .ms{font-size:9px;font-weight:500;text-align:center;line-height:1.15;color:#9ca3af}
+.home-menu .menu-tile .mt{font-size:12px;font-weight:700;text-align:center;line-height:1.2;color:#fff}
+.home-menu .menu-tile .ms{font-size:10px;font-weight:500;text-align:center;line-height:1.2;color:#9ca3af}
 .home-menu .btn-span{grid-column:1 / -1}
 .home-menu #perTokoWrap{grid-column:1 / -1;margin:0}
 .home-menu #perTokoWrap .card{
@@ -195,24 +195,8 @@ header b{font-size:1.1rem;color:#fff}
 .home-menu #idPerTokoHead .ms{font-size:10px;font-weight:500;color:#9ca3af;line-height:1.2}
 .home-menu .tile-wide{grid-column:span 1}
 @media (max-width:360px){
-  .home-menu{grid-template-columns:1fr 1fr 1fr;}
-  .home-menu .menu-tile{min-height:88px;padding:8px 3px;}
-  .home-menu .menu-tile .mt{font-size:10px}
-  .home-menu .menu-tile .ms{font-size:8px}
+  .home-menu{grid-template-columns:1fr 1fr}
 }
-
-.page-header{
-  display:flex;align-items:center;justify-content:space-between;
-  margin-bottom:12px;padding:0 2px;
-}
-.page-header h2,.page-header .page-title{
-  margin:0;font-size:1.05rem;font-weight:800;color:#fff;letter-spacing:.2px;
-}
-.page .card{background:#141414;border:1px solid #2a2a2a;border-radius:14px}
-.page input,.page select{
-  background:#0f0f0f;border:1px solid #2a2a2a;color:#fff;border-radius:10px;
-}
-
 /* Bottom nav mockup */
 nav{
   position:fixed;bottom:0;left:0;right:0;
@@ -413,6 +397,7 @@ width:320px;
 border:0;border-radius:10px;padding:8px 12px;font-size:13px;font-weight:700;cursor:pointer;color:#fff;flex:1;min-width:70px;line-height:1.2
 }
 .lp-del-toast .lp-share{background:#10b981}
+.lp-del-toast .lp-dl{background:#3b82f6}
 .lp-del-toast .lp-ok{background:#ef4444}
 .lp-del-toast .lp-cancel{background:#334155}
 
@@ -604,23 +589,29 @@ display:flex;
 gap:8px;
 width:100%;
 padding:10px 16px;
-padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));
+padding-bottom:calc(74px + env(safe-area-inset-bottom,0px));
 background:linear-gradient(transparent,rgba(0,0,0,.85));
 box-sizing:border-box;
 align-items:center;
 justify-content:center;
+position:relative;
+z-index:5;
+pointer-events:auto;
 }
 .fullscreen-photo .fs-actions button{
 flex:1;
 max-width:140px;
 border:0;
 border-radius:10px;
-padding:8px 12px;
+padding:10px 12px;
 font-size:13px;
 font-weight:700;
 cursor:pointer;
 color:#fff;
 line-height:1.2;
+pointer-events:auto;
+-webkit-tap-highlight-color:transparent;
+touch-action:manipulation;
 }
 .fullscreen-photo .fs-close{
 position:absolute;
@@ -635,7 +626,8 @@ height:40px;
 font-size:20px;
 font-weight:700;
 cursor:pointer;
-z-index:2;
+z-index:6;
+pointer-events:auto;
 }
   .confirm-modal{
 position:fixed;
@@ -833,30 +825,9 @@ body.spx-locked #spxLockScreen{
   position:fixed !important;inset:0 !important;z-index:2147483645 !important;
   background:#000 !important;
   display:none;align-items:stretch;justify-content:center;
-  padding:0;margin:0;box-sizing:border-box;
-  overflow:hidden !important;
-  overscroll-behavior:none !important;
-  -webkit-overflow-scrolling:auto !important;
+  padding:0;margin:0;box-sizing:border-box;overflow:hidden;
 }
 #spxGoogleLogin.spx-show{display:flex !important}
-/* Hilangkan scrollbar di halaman Google Login */
-body.spx-google-locked,
-body.spx-google-locked html{
-  overflow:hidden !important;
-  overscroll-behavior:none !important;
-  height:100% !important;
-  touch-action:none !important;
-}
-body.spx-google-locked::-webkit-scrollbar,
-#spxGoogleLogin::-webkit-scrollbar{
-  display:none !important;
-  width:0 !important;
-  height:0 !important;
-}
-body.spx-google-locked{
-  scrollbar-width:none !important;
-  -ms-overflow-style:none !important;
-}
 #spxGoogleLogin .spx-g-bg{
   position:absolute;inset:0;z-index:0;
   background:#000 center center / cover no-repeat;
@@ -1027,9 +998,19 @@ body.spx-google-locked #spxGoogleLogin{visibility:visible !important;pointer-eve
   <div class="spx-splash-bar"><i></i></div>
 </div>
 <script>
-/* Splash dikontrol oleh Firebase Bridge — jangan bunuh sendiri biar tidak loncat */
+/* Splash wajib hilang — skrip mandiri, tidak tergantung skrip lain */
 (function(){
-  // Dibiarkan kosong. Bridge yang urus splash.
+  function killSplash(){
+    var s = document.getElementById("spxSplash");
+    if(!s) return;
+    s.classList.add("spx-hide");
+    s.style.opacity = "0";
+    s.style.visibility = "hidden";
+    s.style.pointerEvents = "none";
+    s.style.display = "none";
+  }
+  setTimeout(killSplash, 4200);
+  setTimeout(killSplash, 6000);
 })();
 </script>
 
@@ -1172,24 +1153,6 @@ body.spx-google-locked #spxGoogleLogin{visibility:visible !important;pointer-eve
       localStorage.setItem(KEY_ON, "1");
       hide();
       try{ if(typeof toast === "function") toast("Aplikasi berhasil diaktivasi"); }catch(e){}
-      // Langsung ke Google Login + bunuh splash permanen (anti loncat)
-      setTimeout(function(){
-        var splash = document.getElementById("spxSplash");
-        if(splash){
-          splash.style.display = "none";
-          splash.style.visibility = "hidden";
-          splash.style.opacity = "0";
-          try{ splash.remove(); }catch(e){}
-        }
-        var login = document.getElementById("spxGoogleLogin");
-        if(login){
-          document.body.classList.add("spx-google-locked");
-          login.classList.add("spx-show");
-          login.style.setProperty("display", "flex", "important");
-          login.style.visibility = "visible";
-          login.style.opacity = "1";
-        }
-      }, 350);
     } else {
       if(err){ err.textContent = "Kode aktivasi salah"; err.style.display = "block"; }
     }
@@ -1308,27 +1271,13 @@ body.spx-google-locked #spxGoogleLogin{visibility:visible !important;pointer-eve
         <span class="mt">Link Tolakan Seller</span>
         <span class="ms">Akses link tolakan seller</span>
       </button>
-
-      <!-- Buka app terinstall di HP (via SpxNative) — TIDAK ke Play Store -->
-      <button type="button" class="menu-tile" onclick="spxOpenApp('darksacor.reactiontime')">
-        <svg class="mi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="9"/>
-          <path d="M12 7v5l3 2"/>
-          <path d="M8 16h8"/>
-        </svg>
-        <span class="mt">Reaction Time</span>
-        <span class="ms">Buka aplikasi</span>
-      </button>
-      <button type="button" class="menu-tile" onclick="go('settings')">
-        <svg class="mi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
-        <span class="mt">Pengaturan</span>
-        <span class="ms">Atur aplikasi</span>
-      </button>
     </div>
   </div>
 
   <div id="homeScan" style="display:none">
-
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      <button class="btn btn2 btn-sm" style="margin:0;width:auto;font-size:13px" onclick="closeScan()">Kembali</button>
+    </div>
 
     <div class="card" style="padding:12px">
       <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:#94a3b8">Mode Scan</div>
@@ -1365,7 +1314,8 @@ body.spx-google-locked #spxGoogleLogin{visibility:visible !important;pointer-eve
 
 <div class="page" id="history">
   <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-</div>
+    <button class="btn btn2 btn-sm" style="margin:0;width:auto;font-size:13px" onclick="go('home')">Kembali</button>
+  </div>
   <div class="card">
     <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:#94a3b8">Cari ID</div>
     <div style="display:flex;gap:8px;align-items:center">
@@ -1395,14 +1345,15 @@ body.spx-google-locked #spxGoogleLogin{visibility:visible !important;pointer-eve
       </div>
     </div>
   </div>
-  <button type="button" id="photoFabTutup" class="photo-fab-tutup" onclick="closeCamera();go('home')">Tutup</button>
+  <button type="button" id="photoFabTutup" class="photo-fab-tutup" onclick="closeCamera();go('galeri')">Tutup</button>
 
   <canvas id="photoCanvas" style="display:none"></canvas>
 </div>
 
 <div class="page" id="idpertoko">
   <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-</div>
+    <button class="btn btn2 btn-sm" style="margin:0;width:auto;font-size:13px" onclick="go('home')">Kembali</button>
+  </div>
   <div class="card" style="margin-bottom:12px">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
       <div style="font-weight:700;font-size:15px;color:#fff">ID per Toko</div>
@@ -1418,14 +1369,16 @@ body.spx-google-locked #spxGoogleLogin{visibility:visible !important;pointer-eve
 
 <div class="page" id="galeri">
   <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-</div>
+    <button class="btn btn2 btn-sm" style="margin:0;width:auto;font-size:13px" onclick="leaveGaleriToHome()">Kembali</button>
+  </div>
   <div id="photoGalleryLabel" style="font-weight:700;font-size:13px;margin:0 0 8px;color:#94a3b8">Galeri Foto</div>
   <div id="gallery" class="photo-gallery"></div>
 </div>
 
 <div class="page" id="share">
   <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-</div>
+    <button class="btn btn2 btn-sm" style="margin:0;width:auto;font-size:13px" onclick="go('home')">Kembali</button>
+  </div>
   <div class="card">
     <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:#94a3b8">Filter Toko</div>
     <select id="sCat" onchange="sharePreview()" style="margin-bottom:10px;font-size:13px;padding:10px"></select>
@@ -1444,7 +1397,8 @@ body.spx-google-locked #spxGoogleLogin{visibility:visible !important;pointer-eve
 
 <div class="page" id="buat">
   <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-</div>
+    <button class="btn btn2 btn-sm" style="margin:0;width:auto;font-size:13px" onclick="go('home')">Kembali</button>
+  </div>
   <div class="card">
     <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:#94a3b8">Pilihan isi cepat</div>
     <div class="gen-chips" id="genChips">
@@ -1524,11 +1478,15 @@ body.spx-google-locked #spxGoogleLogin{visibility:visible !important;pointer-eve
 <div class="page" id="recycle">
   <div id="recycleActions" style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-bottom:12px">
     <button type="button" id="btnKosongRec" class="btn btn3 btn-sm" style="margin:0;width:auto;font-size:13px;display:none" onclick="kosong()">Kosongkan semua</button>
-</div>
+    <button type="button" class="btn btn2 btn-sm" style="margin:0;width:auto;font-size:13px" onclick="go('history')">Kembali</button>
+  </div>
   <div id="hasilRec"></div>
 </div>
 
 <div class="page" id="toko">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+    <button class="btn btn2 btn-sm" style="margin:0;width:auto;font-size:13px" onclick="go('idpertoko')">Kembali</button>
+  </div>
   <div class="card" style="margin-top:0">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px">
       <div style="font-weight:700;font-size:1.05rem" id="tokoTitle">Toko</div>
@@ -1585,9 +1543,9 @@ body.spx-google-locked #spxGoogleLogin{visibility:visible !important;pointer-eve
 <button id="n-photo" onclick="navCameraAction()" aria-label="Camera">
   <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 8h3l2-2h6l2 2h3v12H4V8z"/><circle cx="12" cy="13" r="3.5"/></svg>
 </button>
-<button id="n-back" onclick="navBack()">
-  <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
-  Kembali
+<button id="n-settings" onclick="go('settings')">
+  <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+  Pengaturan
 </button>
 </nav>
 
@@ -1645,30 +1603,28 @@ var currentPage="home";
 var currentToko="";
 var navPages=["home","settings"];
 
-
-function navBack(){
-  // Pusat semua "kembali" di navbar
-  try{
-    if(typeof closeScan === "function"){
-      var box = document.getElementById("homeScan");
-      if(box && box.style.display !== "none" && box.style.display !== ""){
-        closeScan();
-        return;
-      }
-    }
-  }catch(e){}
-  // Kalau di sub-halaman → kembali ke home
-  if(typeof currentPage !== "undefined" && currentPage && currentPage !== "home"){
-    go("home");
-    return;
-  }
-  // Sudah di home → tidak keluar app, biarkan
-}
-
 function go(p){
   if(p==="search") p="history";
   // Scan sudah digabung ke Home (bukan halaman nav terpisah)
   if(p==="scan"){ go("home"); openScan(); return; }
+  var prevPage=currentPage;
+  // Tutup zoom viewer jika ada
+  var pv=document.getElementById("photoViewer");
+  if(pv) pv.remove();
+  // Jika keluar dari galeri → backup/sync online
+  if(prevPage==="galeri" && p!=="galeri" && p!=="photo"){
+    try{
+      setTimeout(function(){
+        try{
+          if(typeof window.spxRequestBackup==="function") window.spxRequestBackup("leave-galeri");
+        }catch(e3){}
+      }, 200);
+    }catch(e){}
+  }
+  // Pindah dari photo → pastikan kamera ditutup kecuali tetap di photo
+  if(prevPage==="photo" && p!=="photo"){
+    try{ if(typeof closeCamera==="function") closeCamera(); }catch(e){}
+  }
   var ps=["home","history","share","buat","photo","galeri","settings","recycle","toko","idpertoko"];
   for(var i=0;i<ps.length;i++){
     var el=document.getElementById(ps[i]);
@@ -1691,7 +1647,12 @@ function go(p){
   if(p=="settings") listToko();
   if(p=="share"){ fill(); sharePreview(); }
   if(p=="buat"){ if(typeof genRenderFields==="function") genRenderFields(); }
-  if(p=="galeri"){ if(typeof loadPhotos==="function") loadPhotos(); if(typeof refreshGallery==="function") refreshGallery(); }
+  if(p=="galeri"){
+    // Pastikan galeri tidak tetap display:none (sisa state dari kamera)
+    setPhotoGalleryVisible(true);
+    if(typeof loadPhotos==="function") loadPhotos();
+    else if(typeof refreshGallery==="function") refreshGallery();
+  }
   if(p=="idpertoko"){ perToko(); showFabScan(1); }
   else if(p=="toko"){ renderToko(); showFabScan(1); }
   else showFabScan(0);
@@ -1758,24 +1719,6 @@ function shareTolakanSeller(){
   }catch(e){
     try{ window.open(url,"_blank"); }catch(e2){}
   }
-}
-
-/** Buka aplikasi yang sudah terinstall di HP (via JavascriptInterface SpxNative).
- *  Contoh: spxOpenApp('darksacor.reactiontime')
- *  TIDAK membuka Play Store. Kalau app belum terinstall → Toast dari native.
- */
-function spxOpenApp(packageName){
-  try{
-    if(window.SpxNative && typeof window.SpxNative.openApp === "function"){
-      window.SpxNative.openApp(String(packageName || "").trim());
-      return;
-    }
-  }catch(e){}
-  // Fallback kalau bukan di WebView Android / interface belum ada
-  try{
-    if(typeof toast === "function") toast("Hanya tersedia di aplikasi Android");
-    else alert("Hanya tersedia di aplikasi Android\nPackage: " + packageName);
-  }catch(e2){}
 }
 
 function openScan(){
@@ -3399,8 +3342,9 @@ function setPhotoGalleryVisible(show){
   var gal=document.getElementById("gallery");
   var lab=document.getElementById("photoGalleryLabel");
   var sc=document.getElementById("photoStartCard");
-  if(gal) gal.style.display=show?"grid":"none";
-  if(lab) lab.style.display=show?"block":"none";
+  // Jangan pakai "grid" di outer gallery (CSS-nya flex column) — itu bikin blank
+  if(gal) gal.style.display=show?"":"none";
+  if(lab) lab.style.display=show?"":"none";
   if(sc) sc.style.display=show?"block":"none";
 }
 
@@ -3566,6 +3510,61 @@ function openCameraNav(){
   go("photo");
   setTimeout(function(){ openCamera(); }, 30);
 }
+
+/** Kembali dari galeri → home + trigger backup */
+function leaveGaleriToHome(){
+  go("home");
+}
+
+/**
+ * Alur back tombol sistem / navbar:
+ * photoViewer (zoom) → galeri
+ * camera terbuka (page photo) → tutup kamera → galeri
+ * page photo tanpa kamera → galeri
+ * galeri → home
+ * lainnya → home
+ * return true jika ditangani (mencegah exit app)
+ */
+function handleAppBack(){
+  // 1) Tutup zoom / fullscreen foto dulu
+  var viewer=document.getElementById("photoViewer");
+  if(viewer){
+    viewer.remove();
+    return true;
+  }
+  // 2) Tutup modal konfirmasi
+  var cm=document.getElementById("confirmModal");
+  if(cm && cm.classList.contains("show")){
+    closeConfirm();
+    return true;
+  }
+  // 3) Mode select multi foto
+  if(typeof selectMode!=="undefined" && selectMode){
+    clearSelection();
+    return true;
+  }
+  // 4) Kamera terbuka → tutup & ke galeri
+  if(currentPage==="photo" || isCameraOpen()){
+    try{ closeCamera(); }catch(e){}
+    go("galeri");
+    return true;
+  }
+  // 5) Galeri → home (dengan backup via go())
+  if(currentPage==="galeri"){
+    go("home");
+    return true;
+  }
+  // 6) Halaman lain (bukan home) → home
+  if(currentPage && currentPage!=="home"){
+    // Tutup scan panel jika terbuka
+    try{ closeScan(true); }catch(e){}
+    go("home");
+    return true;
+  }
+  return false;
+}
+// Ekspos ke native Android WebView
+window.handleAppBack=handleAppBack;
 
 async function openCamera(){
   startLocationWatch();
@@ -3820,7 +3819,10 @@ lokasi:lokasi
 });
 
 toast("✓ Foto berhasil disimpan");
-  try{ if(typeof refreshGallery==="function") refreshGallery(); }catch(e){}
+// Setelah ambil foto → langsung ke galeri (alur: kamera → galeri)
+try{ closeCamera(); }catch(e){}
+setTimeout(function(){ go("galeri"); }, 80);
+
 }
 
   function wrapText(ctx,text,x,y,maxWidth,lineHeight){
@@ -4015,6 +4017,7 @@ function showSelectBar(){
       '<div class="lp-title" id="lpTitle">0 foto dipilih</div>'+
       '<div class="lp-actions">'+
         '<button type="button" class="lp-share">Share</button>'+
+        '<button type="button" class="lp-dl">Download</button>'+
         '<button type="button" class="lp-ok">Hapus</button>'+
         '<button type="button" class="lp-cancel">Batal</button>'+
       '</div>';
@@ -4022,6 +4025,7 @@ function showSelectBar(){
     t.querySelector(".lp-cancel").onclick=function(e){ e.stopPropagation(); clearSelection(); };
     t.querySelector(".lp-ok").onclick=function(e){ e.stopPropagation(); requestDeleteSelected(); };
     t.querySelector(".lp-share").onclick=function(e){ e.stopPropagation(); shareSelectedPhotos(); };
+    t.querySelector(".lp-dl").onclick=function(e){ e.stopPropagation(); downloadSelectedPhotos(); };
   }
   var title=document.getElementById("lpTitle");
   if(title) title.textContent=selectedIds.length+" foto dipilih";
@@ -4047,31 +4051,119 @@ async function shareSelectedPhotos(){
         if(photos[j].id==selectedIds[i]){ p=photos[j]; break; }
       }
       if(!p||!p.image) continue;
-      var blob=await (await fetch(p.image)).blob();
+      var blob=await dataUrlToBlob(p.image);
       files.push(new File([blob], "SPX_Express_12_"+p.id+".jpg", {type:"image/jpeg"}));
     }
     if(!files.length){ toast("Tidak ada foto"); return; }
-    // Pesan WhatsApp kosong — hanya file
-    if(navigator.canShare && navigator.canShare({files:files})){
-      await navigator.share({ files:files });
-      toast("Berhasil dibagikan");
-      clearSelection();
-    } else if(navigator.share && files.length===1){
-      await navigator.share({ files:files });
+    // Coba share multi file (WhatsApp / system share sheet)
+    var shared=false;
+    try{
+      if(navigator.canShare && navigator.canShare({files:files})){
+        await navigator.share({ files:files });
+        shared=true;
+      } else if(navigator.share){
+        // Fallback: share satu per satu jika multi tidak didukung
+        if(files.length===1){
+          await navigator.share({ files:files });
+          shared=true;
+        } else {
+          for(var s=0;s<files.length;s++){
+            try{
+              if(navigator.canShare && navigator.canShare({files:[files[s]]})){
+                await navigator.share({ files:[files[s]] });
+              } else {
+                await navigator.share({ files:[files[s]] });
+              }
+            }catch(se){
+              if(se && se.name==="AbortError") break;
+            }
+          }
+          shared=true;
+        }
+      }
+    }catch(se2){
+      if(se2 && se2.name==="AbortError"){ toast("Batal"); return; }
+    }
+    if(shared){
       toast("Berhasil dibagikan");
       clearSelection();
     } else {
-      toast("Share multi tidak didukung, unduh manual");
+      // Fallback unduh semua
+      toast("Share tidak didukung, mengunduh...");
       for(var k=0;k<files.length;k++){
-        var url=URL.createObjectURL(files[k]);
-        var a=document.createElement("a");
-        a.href=url; a.download=files[k].name; a.click();
-        URL.revokeObjectURL(url);
+        triggerBlobDownload(files[k], files[k].name);
       }
+      clearSelection();
     }
   }catch(e){
     if(e && e.name==="AbortError") toast("Batal");
     else toast("Gagal share");
+  }
+}
+
+async function downloadSelectedPhotos(){
+  if(!selectedIds.length){ toast("Pilih foto dulu"); return; }
+  var count=0;
+  for(var i=0;i<selectedIds.length;i++){
+    var p=null;
+    for(var j=0;j<photos.length;j++){
+      if(photos[j].id==selectedIds[i]){ p=photos[j]; break; }
+    }
+    if(!p||!p.image) continue;
+    try{
+      var blob=await dataUrlToBlob(p.image);
+      triggerBlobDownload(blob, "SPX_Express_12_"+p.id+".jpg");
+      count++;
+    }catch(e){}
+  }
+  if(count){ toast(count+" foto diunduh"); clearSelection(); }
+  else toast("Gagal unduh");
+}
+
+function dataUrlToBlob(dataUrl){
+  return new Promise(function(resolve, reject){
+    try{
+      if(!dataUrl){ reject(new Error("empty")); return; }
+      if(dataUrl.indexOf("blob:")===0){
+        fetch(dataUrl).then(function(r){ return r.blob(); }).then(resolve).catch(reject);
+        return;
+      }
+      if(dataUrl.indexOf("data:")===0){
+        var parts=dataUrl.split(",");
+        var mime=(parts[0].match(/:(.*?);/)||[])[1]||"image/jpeg";
+        var bstr=atob(parts[1]||"");
+        var n=bstr.length;
+        var u8=new Uint8Array(n);
+        for(var i=0;i<n;i++) u8[i]=bstr.charCodeAt(i);
+        resolve(new Blob([u8],{type:mime}));
+        return;
+      }
+      fetch(dataUrl).then(function(r){ return r.blob(); }).then(resolve).catch(reject);
+    }catch(e){ reject(e); }
+  });
+}
+
+function triggerBlobDownload(blobOrUrl, filename){
+  try{
+    var url, revoke=false;
+    if(typeof blobOrUrl==="string"){
+      url=blobOrUrl;
+    } else {
+      url=URL.createObjectURL(blobOrUrl);
+      revoke=true;
+    }
+    var a=document.createElement("a");
+    a.href=url;
+    a.download=filename||("SPX_Express_12_"+Date.now()+".jpg");
+    a.style.display="none";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){
+      try{ a.remove(); }catch(e){}
+      if(revoke) try{ URL.revokeObjectURL(url); }catch(e2){}
+    }, 1500);
+  }catch(e){
+    toast("Gagal unduh");
   }
 }
 
@@ -4407,33 +4499,43 @@ function viewPhoto(id){
   document.body.appendChild(d);
 }
   function downloadPhoto(img){
-
-var a=document.createElement("a");
-
-a.href=img;
-
-a.download="SPX_Express_12_"+Date.now()+".jpg";
-
-a.click();
-
-toast("Download selesai");
-
+    dataUrlToBlob(img).then(function(blob){
+      triggerBlobDownload(blob, "SPX_Express_12_"+Date.now()+".jpg");
+      toast("Download selesai");
+    }).catch(function(){
+      // fallback langsung
+      try{
+        var a=document.createElement("a");
+        a.href=img;
+        a.download="SPX_Express_12_"+Date.now()+".jpg";
+        a.style.display="none";
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function(){ try{ a.remove(); }catch(e){} }, 800);
+        toast("Download selesai");
+      }catch(e2){ toast("Gagal unduh"); }
+    });
   }
   async function sharePhoto(img){
-try{
-const blob=await(await fetch(img)).blob();
-const file=new File([blob],"SPX_Express_12.jpg",{type:"image/jpeg"});
-// Pesan WhatsApp kosong — hanya file
-if(navigator.canShare && navigator.canShare({files:[file]})){
-  await navigator.share({ files:[file] });
-}else if(navigator.share){
-  await navigator.share({ files:[file] });
-}else{
-  toast("Share tidak didukung");
-}
-}catch(e){
-  toast("Batal");
-}
+    try{
+      var blob=await dataUrlToBlob(img);
+      var file=new File([blob],"SPX_Express_12_"+Date.now()+".jpg",{type:"image/jpeg"});
+      // Pesan WhatsApp kosong — hanya file
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        await navigator.share({ files:[file] });
+        toast("Berhasil dibagikan");
+      }else if(navigator.share){
+        await navigator.share({ files:[file] });
+        toast("Berhasil dibagikan");
+      }else{
+        // Fallback: unduh agar user bisa share manual
+        triggerBlobDownload(blob, file.name);
+        toast("Share tidak didukung — foto diunduh");
+      }
+    }catch(e){
+      if(e && e.name==="AbortError") toast("Batal");
+      else toast("Gagal share");
+    }
   }
   var deletePhotoId=null;
 var confirmCallback=null;
@@ -4540,66 +4642,21 @@ toast("Database gagal dibuat");
 }
 
 function savePhoto(data){
-  if(!data) return;
-  // Pastikan ada time
-  if(!data.time) data.time = Date.now();
 
-  // 1) Langsung masuk array memori + refresh UI (tanpa nunggu DB)
-  //    pakai id sementara negatif biar unik sampai DB assign id asli
-  if(!data.id) data.id = -Date.now();
-  try{
-    if(typeof photos === "undefined" || !photos) photos = [];
-    photos.unshift(data);
-    if(typeof refreshGallery === "function") refreshGallery();
-  }catch(e){}
+if(!photoDB) return;
 
-  // 2) Simpan ke IndexedDB
-  if(!photoDB){
-    try{ if(typeof initPhotoDB === "function") initPhotoDB(); }catch(e){}
-    // Coba lagi sebentar kalau DB belum siap
-    setTimeout(function(){
-      if(!photoDB) return;
-      try{
-        var tx0=photoDB.transaction(["photos"],"readwrite");
-        var st0=tx0.objectStore("photos");
-        // simpan tanpa id sementara (autoIncrement)
-        var toSave={image:data.image,time:data.time,lokasi:data.lokasi||""};
-        var req0=st0.add(toSave);
-        req0.onsuccess=function(ev){
-          data.id = ev.target.result;
-          if(typeof loadPhotos === "function") loadPhotos();
-        };
-      }catch(e){}
-    }, 400);
-    return;
-  }
+var tx=photoDB.transaction(["photos"],"readwrite");
 
-  try{
-    var tx=photoDB.transaction(["photos"],"readwrite");
-    var store=tx.objectStore("photos");
-    var toSave={image:data.image,time:data.time,lokasi:data.lokasi||""};
-    var req=store.add(toSave);
-    req.onsuccess=function(ev){
-      // Update id sementara → id asli dari DB
-      var realId=ev.target.result;
-      for(var i=0;i<photos.length;i++){
-        if(photos[i]===data || (photos[i].time===data.time && photos[i].id<0)){
-          photos[i].id=realId;
-          break;
-        }
-      }
-      if(typeof refreshGallery === "function") refreshGallery();
-    };
-    tx.oncomplete=function(){
-      // Sinkron ulang dari DB (sumber kebenaran)
-      if(typeof loadPhotos === "function") loadPhotos();
-    };
-    tx.onerror=function(){
-      try{ if(typeof toast === "function") toast("Gagal simpan foto"); }catch(e){}
-    };
-  }catch(e){
-    try{ if(typeof toast === "function") toast("Gagal simpan foto"); }catch(e2){}
-  }
+var store=tx.objectStore("photos");
+
+store.add(data);
+
+tx.oncomplete=function(){
+
+loadPhotos();
+
+};
+
 }
 
 function loadPhotos(){
@@ -5465,8 +5522,9 @@ try{ genRenderFields(); }catch(e){}
     if(activationHandled && !hasGoogleSession()) return;
 
     activationHandled = true;
+    hideSplash();
 
-    // Utamakan Firebase — biarkan bridge yang urus login gate
+    // Firebase sudah login → jangan buka login / Drive OAuth lagi
     try{
       if(window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()){
         hideGoogleLogin();
@@ -5483,6 +5541,7 @@ try{ genRenderFields(); }catch(e){}
 
     if(hasGoogleSession()){
       accessToken = localStorage.getItem(KEY_G_TOKEN);
+      // Token Firebase dummy → jangan backup Drive
       if(accessToken && accessToken.indexOf("firebase-session:")===0){
         hideGoogleLogin();
         updateSettingsCard();
@@ -5493,21 +5552,13 @@ try{ genRenderFields(); }catch(e){}
       installSaveHook();
       setTimeout(function(){ doGoogleBackup(); }, 1500);
     } else {
-      // JANGAN paksa showGoogleLogin di sini — biarkan Firebase Bridge yang handle
-      // supaya tidak loncat dengan bridge
+      // Biarkan bridge Firebase yang menampilkan login (jeda)
       setTimeout(function(){
         try{
-          if(window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()){
-            hideGoogleLogin();
-            return;
-          }
+          if(window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()) return;
         }catch(e){}
-        // Hanya tampilkan jika bridge belum menampilkan
-        var loginEl = $("spxGoogleLogin");
-        if(loginEl && !loginEl.classList.contains("spx-show")){
-          showGoogleLogin();
-        }
-      }, 1400);
+        showGoogleLogin();
+      }, 900);
     }
   }
 
@@ -5533,21 +5584,18 @@ try{ genRenderFields(); }catch(e){}
   }
 
   function bootGoogleLayer(){
-    // Jangan bunuh splash terlalu agresif — biarkan bridge + aktivasi yang urus
-    // Hanya safety net sangat lambat
+    // Splash lebih lama (~2.8s) biar tidak terasa kilat
     setTimeout(function(){
-      if(isActivated()) afterActivationCheck();
-    }, 4500);
+      hideSplash();
+      setTimeout(function(){
+        hideSplash();
+        if(isActivated()) afterActivationCheck();
+      }, 400);
+    }, 4000);
 
-    setTimeout(function(){
-      // Safety terakhir saja
-      try{
-        var s = document.getElementById("spxSplash");
-        if(s && isActivated()){
-          // biarkan
-        }
-      }catch(e){}
-    }, 9000);
+    // Safety
+    setTimeout(hideSplash, 5500);
+    setTimeout(hideSplash, 8000);
 
     watchActivation();
     updateSettingsCard();
@@ -5584,13 +5632,19 @@ try{ genRenderFields(); }catch(e){}
     }
   }catch(e){
     console.error("bootGoogleLayer", e);
+    setTimeout(function(){
+      try{ hideSplash(); }catch(e2){}
+    }, 500);
   }
-  // Fallback sangat lambat saja (bridge yang utama)
+  // Fallback absolut: hilangkan splash meski IIFE bermasalah di bagian lain
   setTimeout(function(){
     try{
       var s = document.getElementById("spxSplash");
-      if(s && isActivated()){
-        // biarkan bridge yang putuskan
+      if(s){
+        s.style.display = "none";
+        s.style.visibility = "hidden";
+        s.style.opacity = "0";
+        s.style.pointerEvents = "none";
       }
     }catch(e){}
   }, 5500);
