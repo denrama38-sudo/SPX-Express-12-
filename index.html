@@ -1039,16 +1039,16 @@ body.spx-google-locked #spxGoogleLogin{visibility:visible !important;pointer-eve
         lock.style.display="none";
       }
       document.body.classList.remove("spx-locked");
-      // Cegah flash home: jika belum ada sesi Google, kunci ke layar login segera
+      // Cegah flash home
       var hasSesi=false;
       try{
-        hasSesi = localStorage.getItem("spxexp12_v2_fb_session")==="1"
-          || !!localStorage.getItem("spxexp12_v2_fb_uid")
-          || (localStorage.getItem("spxexp12_v2_gtoken")||"").indexOf("firebase-session:")===0
-          || !!localStorage.getItem("spxexp12_v2_guser");
+        hasSesi = localStorage.getItem("spxexp12_v2_login_ok")==="1"
+          || localStorage.getItem("spxexp12_v2_fb_session")==="1"
+          || (localStorage.getItem("spxexp12_v2_gtoken")||"").indexOf("firebase-session:")===0;
       }catch(e2){}
-      if(hasSesi){ window.__spxLoginOk = true; }
-      else {
+      if(hasSesi){
+        window.__spxLoginOk = true;
+      } else {
         var gl=document.getElementById("spxGoogleLogin");
         if(gl){
           document.body.classList.add("spx-google-locked");
@@ -5131,24 +5131,21 @@ try{ genRenderFields(); }catch(e){}
   }
 
   function showGoogleLogin(){
-    // Sticky + sesi (localStorage) — cegah loop balik ke login
+    // Gate tunggal: kalau sudah login, JANGAN tampil
     try{
       if(window.__spxLoginOk) return;
       if(localStorage.getItem("spxexp12_v2_login_ok")==="1"){ window.__spxLoginOk=true; return; }
       if(window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()){
-        window.__spxLoginOk=true; localStorage.setItem("spxexp12_v2_login_ok","1"); return;
+        window.__spxLoginOk=true;
+        try{ localStorage.setItem("spxexp12_v2_login_ok","1"); }catch(e){}
+        return;
       }
-      if(localStorage.getItem("spxexp12_v2_fb_session")==="1") return;
-      if(localStorage.getItem("spxexp12_v2_fb_uid")) return;
-      var tok = localStorage.getItem("spxexp12_v2_gtoken")||"";
-      if(tok.indexOf("firebase-session:")===0) return;
-      if(localStorage.getItem(KEY_G_USER)) return;
     }catch(e){}
     var sc = $("spxGoogleLogin");
     if(!sc) return;
     document.body.classList.add("spx-google-locked");
     sc.classList.add("spx-show");
-    sc.style.display = "flex";
+    try{ sc.style.setProperty("display","flex","important"); }catch(e){ sc.style.display="flex"; }
     var err = $("spxGoogleError");
     if(err) err.style.display = "none";
     var st = $("spxGoogleStatus");
@@ -5589,20 +5586,22 @@ try{ genRenderFields(); }catch(e){}
       installSaveHook();
       setTimeout(function(){ doGoogleBackup(); }, 1500);
     } else {
-      // Biarkan bridge Firebase yang menampilkan login (jeda lebih lama, cegah loop)
+      // HANYA bridge yang boleh buka login — cegah double-trigger / loop
       setTimeout(function(){
         try{
-          if(window.__spxLoginOk) return;
-          if(window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()){
-            window.__spxLoginOk = true;
+          if(window.__spxLoginOk || localStorage.getItem("spxexp12_v2_login_ok")==="1"){
             hideGoogleLogin();
             return;
           }
-          if(localStorage.getItem("spxexp12_v2_fb_session")==="1") return;
-          if((localStorage.getItem("spxexp12_v2_gtoken")||"").indexOf("firebase-session:")===0) return;
+          if(window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()){
+            window.__spxLoginOk = true;
+            localStorage.setItem("spxexp12_v2_login_ok","1");
+            hideGoogleLogin();
+            return;
+          }
         }catch(e){}
-        showGoogleLogin();
-      }, 1800);
+        // Jangan panggil showGoogleLogin di sini — biar bridge saja
+      }, 800);
     }
   }
 
@@ -5895,23 +5894,16 @@ try{ genRenderFields(); }catch(e){}
 
 
 <script>
-/* PENJAGA LOGIN LOOP — jika sudah ada sesi, overlay Google TIDAK boleh muncul */
+/* PENJAGA: sudah login → overlay Google TIDAK boleh muncul lagi */
 (function(){
-  function hasSesi(){
-    try{
-      if(window.__spxLoginOk) return true;
-      if(localStorage.getItem("spxexp12_v2_login_ok")==="1") return true;
-      if(localStorage.getItem("spxexp12_v2_fb_session")==="1") return true;
-      if(localStorage.getItem("spxexp12_v2_fb_uid")) return true;
-      var t=localStorage.getItem("spxexp12_v2_gtoken")||"";
-      if(t.indexOf("firebase-session:")===0) return true;
-      if(localStorage.getItem("spxexp12_v2_guser")) return true;
-      if(window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()) return true;
-    }catch(e){}
-    return false;
-  }
   function forceHideLogin(){
-    if(!hasSesi()) return;
+    var ok=false;
+    try{
+      ok = window.__spxLoginOk===true
+        || localStorage.getItem("spxexp12_v2_login_ok")==="1"
+        || (window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn());
+    }catch(e){}
+    if(!ok) return;
     window.__spxLoginOk = true;
     try{ localStorage.setItem("spxexp12_v2_login_ok","1"); }catch(e){}
     var sc=document.getElementById("spxGoogleLogin");
@@ -5923,10 +5915,7 @@ try{ genRenderFields(); }catch(e){}
     }
     try{ document.body.classList.remove("spx-google-locked"); }catch(e){}
   }
-  setInterval(forceHideLogin, 400);
-  setTimeout(forceHideLogin, 300);
-  setTimeout(forceHideLogin, 1000);
-  setTimeout(forceHideLogin, 2500);
+  setInterval(forceHideLogin, 500);
   window.spxForceHideLogin = forceHideLogin;
 })();
 </script>

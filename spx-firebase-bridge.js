@@ -1,14 +1,10 @@
 /**
- * SPX Express 12 — Firebase Bridge (Phase 1A) — FIX LOGIN LOOP
- * ============================================================
- * Masalah: setelah login Google (Firebase), kode Drive lama
- * mengecek KEY_G_TOKEN / KEY_G_USER → kosong → tampil login lagi.
- *
- * Perbaikan:
- * - Tulis "sesi palsu" ke KEY_G_USER agar kode lama diam
- * - Pakai popup (bukan redirect) supaya tidak reload race
- * - Paksa hide overlay login begitu Firebase user ada
- * - Blok showGoogleLogin lama saat Firebase sudah login
+ * SPX Express 12 — Firebase Bridge (LOGIN FLOW FIXED)
+ * ====================================================
+ * Aturan tunggal:
+ * 1. Belum login → tampil Google Login
+ * 2. Sudah login (sukses / flag localStorage) → Home, JANGAN balik ke login
+ * 3. Hanya tombol Logout yang boleh buka Google Login lagi
  */
 (function () {
   "use strict";
@@ -34,6 +30,27 @@
     return localStorage.getItem(KEY_ON) === "1";
   }
 
+  function markLoginOk() {
+    window.__spxLoginOk = true;
+    try { localStorage.setItem(KEY_LOGIN_OK, "1"); } catch (e) {}
+  }
+
+  function clearLoginOk() {
+    window.__spxLoginOk = false;
+    try { localStorage.removeItem(KEY_LOGIN_OK); } catch (e) {}
+  }
+
+  function isLoginOk() {
+    try {
+      if (window.__spxLoginOk === true) return true;
+      if (localStorage.getItem(KEY_LOGIN_OK) === "1") {
+        window.__spxLoginOk = true;
+        return true;
+      }
+    } catch (e) {}
+    return false;
+  }
+
   function mirrorSessionForLegacy(user) {
     if (!user) return;
     try {
@@ -44,60 +61,13 @@
         sub: user.uid || ""
       };
       localStorage.setItem(KEY_G_USER, JSON.stringify(u));
-      if (!localStorage.getItem(KEY_G_TOKEN)) {
-        localStorage.setItem(KEY_G_TOKEN, "firebase-session:" + user.uid);
-      }
-      localStorage.setItem(KEY_FB_UID, user.uid);
+      localStorage.setItem(KEY_G_TOKEN, "firebase-session:" + (user.uid || "1"));
+      localStorage.setItem(KEY_FB_UID, user.uid || "");
       localStorage.setItem(KEY_FB_SESSION, "1");
+      markLoginOk();
     } catch (e) {
       console.warn("mirrorSession", e);
     }
-  }
-
-
-  function markLoginOk() {
-    window.__spxLoginOk = true;
-    try { localStorage.setItem(KEY_LOGIN_OK, "1"); } catch (e) {}
-  }
-  function clearLoginOk() {
-    window.__spxLoginOk = false;
-    try { localStorage.removeItem(KEY_LOGIN_OK); } catch (e) {}
-  }
-  function isLoginOk() {
-    if (window.__spxLoginOk) return true;
-    try {
-      if (localStorage.getItem(KEY_LOGIN_OK) === "1") {
-        markLoginOk();
-        return true;
-      }
-    } catch (e) {}
-    try {
-      if (window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()) {
-        markLoginOk();
-        return true;
-      }
-    } catch (e) {}
-    try {
-      var tok = localStorage.getItem(KEY_G_TOKEN) || "";
-      if (tok.indexOf("firebase-session:") === 0) { markLoginOk(); return true; }
-      if (localStorage.getItem(KEY_FB_SESSION) === "1") { markLoginOk(); return true; }
-      if (localStorage.getItem(KEY_G_USER)) { markLoginOk(); return true; }
-    } catch (e) {}
-    return false;
-  }
-  /** Paksa tutup overlay login — dipanggil berkala agar tidak bisa muncul lagi setelah login */
-  function enforceHideLoginIfOk() {
-    if (!isLoginOk()) return;
-    try {
-      var sc = $("spxGoogleLogin");
-      if (sc) {
-        sc.classList.remove("spx-show");
-        sc.style.setProperty("display", "none", "important");
-        sc.style.visibility = "hidden";
-        sc.style.pointerEvents = "none";
-      }
-      document.body.classList.remove("spx-google-locked");
-    } catch (e) {}
   }
 
   function clearLegacySession() {
@@ -111,55 +81,6 @@
     } catch (e) {}
   }
 
-  function hideGoogleLoginOverlay() {
-    var sc = $("spxGoogleLogin");
-    if (sc) {
-      sc.classList.remove("spx-show");
-      try { sc.style.setProperty("display", "none", "important"); } catch (e) { sc.style.display = "none"; }
-      sc.style.visibility = "hidden";
-      sc.style.pointerEvents = "none";
-    }
-    document.body.classList.remove("spx-google-locked");
-    // Jika Firebase sudah login, kunci agar overlay tidak muncul lagi
-    try {
-      if (window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()) {
-        markLoginOk();
-      }
-      if ((localStorage.getItem(KEY_G_TOKEN) || "").indexOf("firebase-session:") === 0) {
-        markLoginOk();
-      }
-    } catch (e) {}
-  }
-
-  function showGoogleLoginOverlay() {
-    // Sudah login / ada sesi → JANGAN tampil login (ini yang cegah loop)
-    if (isLoginOk()) {
-      hideGoogleLoginOverlay();
-      enforceHideLoginIfOk();
-      return;
-    }
-    if (window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()) {
-      markLoginOk();
-      hideGoogleLoginOverlay();
-      return;
-    }
-    // Ada sesi tersimpan → tunggu restore Firebase, jangan paksa login
-    if (localStorage.getItem(KEY_FB_SESSION) === "1" || localStorage.getItem(KEY_FB_UID)) {
-      return;
-    }
-    var tok = "";
-    try { tok = localStorage.getItem(KEY_G_TOKEN) || ""; } catch (e) {}
-    if (tok.indexOf("firebase-session:") === 0) { markLoginOk(); return; }
-
-    var sc = $("spxGoogleLogin");
-    if (!sc) return;
-    document.body.classList.add("spx-google-locked");
-    sc.classList.add("spx-show");
-    sc.style.setProperty("display", "flex", "important");
-    sc.style.visibility = "visible";
-    sc.style.pointerEvents = "auto";
-  }
-
   function hideSplash() {
     var s = $("spxSplash");
     if (!s) return;
@@ -169,6 +90,60 @@
       s.style.setProperty("opacity", "0", "important");
       s.style.setProperty("visibility", "hidden", "important");
     } catch (e) {}
+  }
+
+  function hideGoogleLoginOverlay() {
+    var sc = $("spxGoogleLogin");
+    if (sc) {
+      sc.classList.remove("spx-show");
+      try { sc.style.setProperty("display", "none", "important"); } catch (e) { sc.style.display = "none"; }
+      sc.style.visibility = "hidden";
+      sc.style.pointerEvents = "none";
+    }
+    try {
+      document.body.classList.remove("spx-google-locked");
+      document.body.classList.remove("spx-locked");
+    } catch (e) {}
+  }
+
+  function showGoogleLoginOverlay() {
+    // SUDAH LOGIN → jangan pernah tampilkan lagi
+    if (isLoginOk()) {
+      hideGoogleLoginOverlay();
+      return;
+    }
+    try {
+      if (window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()) {
+        markLoginOk();
+        mirrorSessionForLegacy(window.spxFirebase.currentUser);
+        hideGoogleLoginOverlay();
+        return;
+      }
+    } catch (e) {}
+
+    var sc = $("spxGoogleLogin");
+    if (!sc) return;
+    document.body.classList.add("spx-google-locked");
+    sc.classList.add("spx-show");
+    try { sc.style.setProperty("display", "flex", "important"); } catch (e) { sc.style.display = "flex"; }
+    sc.style.visibility = "visible";
+    sc.style.pointerEvents = "auto";
+  }
+
+  function enterApp(user) {
+    markLoginOk();
+    if (user) mirrorSessionForLegacy(user);
+    hideSplash();
+    hideGoogleLoginOverlay();
+    updateFirebaseUI(user || null);
+    try {
+      if (typeof window.go === "function") window.go("home");
+      else if (typeof go === "function") go("home");
+    } catch (e) {}
+    // Pastikan overlay tetap mati
+    setTimeout(hideGoogleLoginOverlay, 50);
+    setTimeout(hideGoogleLoginOverlay, 300);
+    setTimeout(hideGoogleLoginOverlay, 1000);
   }
 
   function updateFirebaseUI(user) {
@@ -204,17 +179,18 @@
       if (emailEl) emailEl.textContent = "—";
       if (av) av.style.display = "none";
       if (sync) {
-        sync.textContent = "Firebase: menunggu login";
-        sync.className = "spx-g-sync";
+        sync.textContent = isLoginOk() ? "Firebase: sesi lokal aktif" : "Firebase: menunggu login";
+        sync.className = isLoginOk() ? "spx-g-sync on" : "spx-g-sync";
       }
-      if (btn) btn.style.display = "none";
+      if (btn) btn.style.display = isLoginOk() ? "block" : "none";
       if (fbBadge) {
-        fbBadge.textContent = "Firebase OFF";
-        fbBadge.className = "spx-fb-badge";
+        fbBadge.textContent = isLoginOk() ? "Sesi ON" : "Firebase OFF";
+        fbBadge.className = isLoginOk() ? "spx-fb-badge on" : "spx-fb-badge";
       }
     }
   }
 
+  // ===== LOGIN (swipe Google) =====
   window.spxGoogleSignIn = function () {
     var st = $("spxGoogleStatus");
     var err = $("spxGoogleError");
@@ -222,57 +198,17 @@
       err.style.display = "none";
       err.textContent = "";
     }
-    // Sudah login → jangan buka picker lagi
-    if (window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()) {
-      hideGoogleLoginOverlay();
-      updateFirebaseUI(window.spxFirebase.currentUser);
+
+    if (isLoginOk() && window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()) {
+      enterApp(window.spxFirebase.currentUser);
       return;
     }
+
     if (st) st.textContent = "Membuka Google...";
-
-    // Deteksi file:// (AIDE / WebView lokal) → Firebase Auth selalu gagal unauthorized-domain
-    // Pakai Google OAuth Token Client yang sudah ada di index.html
-    var isFileOrigin = false;
-    try {
-      isFileOrigin = (location.protocol === "file:" || (location.href && location.href.indexOf("file://") === 0));
-    } catch (e) {}
-
-    if (isFileOrigin) {
-      // Fallback ke Google OAuth Token Client (file:// tidak support Firebase Auth)
-      if (st) st.textContent = "Menyiapkan Google Login...";
-      var tries = 0;
-      function tryTokenLogin() {
-        tries++;
-        try {
-          if (typeof initTokenClient === "function") {
-            var ok = initTokenClient();
-            if (ok && typeof requestToken === "function") {
-              if (st) st.textContent = "Membuka Google...";
-              requestToken();
-              return;
-            }
-          }
-        } catch (e) {
-          console.warn("token try", e);
-        }
-        if (tries < 15) {
-          setTimeout(tryTokenLogin, 400);
-          return;
-        }
-        // Gagal total
-        if (st) st.textContent = "";
-        if (err) {
-          err.textContent = "Google script belum siap. Pastikan internet aktif, lalu tutup & buka app lagi.";
-          err.style.display = "block";
-        }
-      }
-      tryTokenLogin();
-      return;
-    }
 
     if (!window.spxFirebase) {
       if (err) {
-        err.textContent = "Firebase belum dimuat — refresh halaman";
+        err.textContent = "Firebase belum dimuat — pastikan internet aktif, tutup & buka app lagi";
         err.style.display = "block";
       }
       if (st) st.textContent = "";
@@ -290,16 +226,13 @@
 
     function onSuccess(user) {
       if (st) st.textContent = "";
+      // LANGKAH KRITIS: kunci sesi dulu sebelum hide overlay
       markLoginOk();
       mirrorSessionForLegacy(user);
-      hideGoogleLoginOverlay();
-      updateFirebaseUI(user);
+      enterApp(user);
       toast("Masuk sebagai " + (user.email || user.displayName || "user"));
-      setTimeout(hideGoogleLoginOverlay, 50);
-      setTimeout(hideGoogleLoginOverlay, 200);
-      setTimeout(hideGoogleLoginOverlay, 500);
-      setTimeout(hideGoogleLoginOverlay, 1000);
-      setTimeout(function () { afterLogin(user); }, 400);
+      installSaveHook();
+      setTimeout(function () { afterLogin(user); }, 500);
     }
 
     function onFail(e) {
@@ -312,17 +245,6 @@
           err.style.display = "block";
         }
         return;
-      }
-      // Jika unauthorized-domain, coba token client
-      if (String(msg).indexOf("unauthorized-domain") >= 0 || String(msg).indexOf("unauthorized") >= 0) {
-        try {
-          if (typeof initTokenClient === "function") initTokenClient();
-          if (typeof requestToken === "function") {
-            if (st) st.textContent = "Mencoba metode alternatif...";
-            requestToken();
-            return;
-          }
-        } catch (ex) {}
       }
       if (err) {
         err.textContent = "Gagal masuk: " + msg;
@@ -345,37 +267,41 @@
     var label = (user && user.email) || "akun Google";
 
     function doOut() {
-      // Paksa backup terakhir sebelum logout
       var finish = function () {
         var pr = window.spxFirebase ? window.spxFirebase.signOut() : Promise.resolve();
         pr.then(function () {
-          clearLoginOk();
           clearLegacySession();
+          clearLoginOk();
           updateFirebaseUI(null);
           toast("Berhasil keluar");
           showGoogleLoginOverlay();
         }).catch(function (e) {
-          toast("Gagal logout: " + (e.message || e));
+          // Tetap clear lokal meski signOut gagal
+          clearLegacySession();
+          clearLoginOk();
+          updateFirebaseUI(null);
+          showGoogleLoginOverlay();
+          toast("Keluar (lokal)");
         });
       };
       if (window.spxFirebaseData && window.spxFirebaseData.saveAppData && navigator.onLine) {
         try {
           var shape = collectLocalShape();
           window.spxFirebaseData.saveAppData(shape).then(finish).catch(function () { finish(); });
-          return;
-        } catch (e) {}
+        } catch (e) {
+          finish();
+        }
+      } else {
+        finish();
       }
-      finish();
     }
 
-    if (typeof showAppConfirm === "function") {
-      showAppConfirm(
-        "Keluar Akun",
-        "Yakin keluar dari " + label + "? Data lokal tetap ada.",
-        doOut
-      );
-    } else if (confirm("Keluar dari " + label + "?")) {
-      doOut();
+    if (typeof window.showAppConfirm === "function") {
+      window.showAppConfirm("Keluar Akun Google", "Yakin keluar dari " + label + "?", doOut);
+    } else if (typeof showAppConfirm === "function") {
+      showAppConfirm("Keluar Akun Google", "Yakin keluar dari " + label + "?", doOut);
+    } else {
+      if (confirm("Keluar dari " + label + "?")) doOut();
     }
   };
 
@@ -580,12 +506,25 @@
     }, 400);
   }
 
+  // ===== BOOT — alur tunggal, tanpa loop =====
   function bootBridge() {
     hideSplash();
-    patchLegacyLoginCalls();
+
+    // Penjaga: kalau sudah login, overlay Google selalu ditutup
+    setInterval(function () {
+      if (isLoginOk()) {
+        hideGoogleLoginOverlay();
+      }
+    }, 500);
 
     if (!window.spxFirebase) {
       console.warn("[Bridge] spxFirebase belum ada");
+      // Tanpa Firebase: jika flag login ada → home, else login
+      if (isLoginOk()) {
+        enterApp(null);
+      } else if (isActivated()) {
+        showGoogleLoginOverlay();
+      }
       return;
     }
 
@@ -599,71 +538,39 @@
       hideSplash();
 
       if (user) {
-        markLoginOk();
-        mirrorSessionForLegacy(user);
-        hideGoogleLoginOverlay();
-        updateFirebaseUI(user);
+        // Firebase bilang sudah login → masuk app
+        enterApp(user);
         installSaveHook();
-        setTimeout(hideGoogleLoginOverlay, 100);
-        setTimeout(hideGoogleLoginOverlay, 500);
         setTimeout(function () { afterLogin(user); }, 600);
-      } else {
-        // JANGAN clear session segera — Firebase WebView sering restore auth terlambat
-        // Hanya tampilkan login jika benar-benar belum ada sesi
-        updateFirebaseUI(null);
-        if (isActivated()) {
-          setTimeout(function () {
-            try {
-              if (window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()) {
-                markLoginOk();
-                mirrorSessionForLegacy(window.spxFirebase.currentUser);
-                hideGoogleLoginOverlay();
-                return;
-              }
-            } catch (e) {}
-            // Masih ada marker sesi? tunggu lagi, jangan hapus / jangan paksa login
-            var hasSesi = false;
-            try {
-              hasSesi = localStorage.getItem(KEY_FB_SESSION) === "1"
-                || !!localStorage.getItem(KEY_FB_UID)
-                || (localStorage.getItem(KEY_G_TOKEN) || "").indexOf("firebase-session:") === 0
-                || !!localStorage.getItem(KEY_G_USER);
-            } catch (e2) {}
-            if (hasSesi) {
-              // Tunggu restore lebih lama
-              setTimeout(function () {
-                try {
-                  if (window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()) {
-                    markLoginOk();
-                    mirrorSessionForLegacy(window.spxFirebase.currentUser);
-                    hideGoogleLoginOverlay();
-                    return;
-                  }
-                } catch (e3) {}
-                // Baru setelah gagal restore → clear & minta login
-                clearLegacySession();
-                clearLoginOk();
-                showGoogleLoginOverlay();
-              }, 2500);
-              return;
-            }
-            showGoogleLoginOverlay();
-          }, 1500);
-        }
+        return;
       }
+
+      // Firebase bilang BELUM login
+      if (isLoginOk()) {
+        // Flag lokal bilang sudah pernah login → TETAP di home
+        // (jangan clear, jangan buka login — itu penyebab loop)
+        enterApp(null);
+        return;
+      }
+
+      // Benar-benar belum pernah login
+      updateFirebaseUI(null);
+      if (isActivated()) {
+        showGoogleLoginOverlay();
+      }
+    }).catch(function () {
+      if (isLoginOk()) enterApp(null);
+      else if (isActivated()) showGoogleLoginOverlay();
     });
 
     window.spxFirebase.onAuth(function (user) {
       if (user) {
-        markLoginOk();
-        mirrorSessionForLegacy(user);
-        hideGoogleLoginOverlay();
-        updateFirebaseUI(user);
+        // Login / restore sukses
+        enterApp(user);
         installSaveHook();
-      } else {
-        // Jangan clear / jangan show login di sini — bisa race saat restore
-        updateFirebaseUI(null);
       }
+      // Jika user null: JANGAN buka login, JANGAN clear sesi
+      // (bisa race saat restore; hanya logout manual yang clear)
     });
 
     setTimeout(installSaveHook, 1000);
@@ -691,14 +598,14 @@
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", function () {
-      setTimeout(bootBridge, 600);
-      setTimeout(ensureBadge, 800);
+      setTimeout(bootBridge, 500);
+      setTimeout(ensureBadge, 700);
     });
   } else {
-    setTimeout(bootBridge, 600);
-    setTimeout(ensureBadge, 800);
+    setTimeout(bootBridge, 500);
+    setTimeout(ensureBadge, 700);
   }
 
-  setTimeout(hideSplash, 5500);
-  setTimeout(hideSplash, 8500);
+  setTimeout(hideSplash, 4000);
+  setTimeout(hideSplash, 7000);
 })();
