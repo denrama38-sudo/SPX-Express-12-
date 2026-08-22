@@ -1691,7 +1691,7 @@ function go(p){
   if(p=="settings") listToko();
   if(p=="share"){ fill(); sharePreview(); }
   if(p=="buat"){ if(typeof genRenderFields==="function") genRenderFields(); }
-  if(p=="galeri"){ if(typeof loadPhotos==="function") loadPhotos(); else if(typeof refreshGallery==="function") refreshGallery(); }
+  if(p=="galeri"){ if(typeof loadPhotos==="function") loadPhotos(); if(typeof refreshGallery==="function") refreshGallery(); }
   if(p=="idpertoko"){ perToko(); showFabScan(1); }
   else if(p=="toko"){ renderToko(); showFabScan(1); }
   else showFabScan(0);
@@ -3820,7 +3820,7 @@ lokasi:lokasi
 });
 
 toast("✓ Foto berhasil disimpan");
-
+  try{ if(typeof refreshGallery==="function") refreshGallery(); }catch(e){}
 }
 
   function wrapText(ctx,text,x,y,maxWidth,lineHeight){
@@ -4540,21 +4540,66 @@ toast("Database gagal dibuat");
 }
 
 function savePhoto(data){
+  if(!data) return;
+  // Pastikan ada time
+  if(!data.time) data.time = Date.now();
 
-if(!photoDB) return;
+  // 1) Langsung masuk array memori + refresh UI (tanpa nunggu DB)
+  //    pakai id sementara negatif biar unik sampai DB assign id asli
+  if(!data.id) data.id = -Date.now();
+  try{
+    if(typeof photos === "undefined" || !photos) photos = [];
+    photos.unshift(data);
+    if(typeof refreshGallery === "function") refreshGallery();
+  }catch(e){}
 
-var tx=photoDB.transaction(["photos"],"readwrite");
+  // 2) Simpan ke IndexedDB
+  if(!photoDB){
+    try{ if(typeof initPhotoDB === "function") initPhotoDB(); }catch(e){}
+    // Coba lagi sebentar kalau DB belum siap
+    setTimeout(function(){
+      if(!photoDB) return;
+      try{
+        var tx0=photoDB.transaction(["photos"],"readwrite");
+        var st0=tx0.objectStore("photos");
+        // simpan tanpa id sementara (autoIncrement)
+        var toSave={image:data.image,time:data.time,lokasi:data.lokasi||""};
+        var req0=st0.add(toSave);
+        req0.onsuccess=function(ev){
+          data.id = ev.target.result;
+          if(typeof loadPhotos === "function") loadPhotos();
+        };
+      }catch(e){}
+    }, 400);
+    return;
+  }
 
-var store=tx.objectStore("photos");
-
-store.add(data);
-
-tx.oncomplete=function(){
-
-loadPhotos();
-
-};
-
+  try{
+    var tx=photoDB.transaction(["photos"],"readwrite");
+    var store=tx.objectStore("photos");
+    var toSave={image:data.image,time:data.time,lokasi:data.lokasi||""};
+    var req=store.add(toSave);
+    req.onsuccess=function(ev){
+      // Update id sementara → id asli dari DB
+      var realId=ev.target.result;
+      for(var i=0;i<photos.length;i++){
+        if(photos[i]===data || (photos[i].time===data.time && photos[i].id<0)){
+          photos[i].id=realId;
+          break;
+        }
+      }
+      if(typeof refreshGallery === "function") refreshGallery();
+    };
+    tx.oncomplete=function(){
+      // Sinkron ulang dari DB (sumber kebenaran)
+      if(typeof loadPhotos === "function") loadPhotos();
+    };
+    tx.onerror=function(){
+      try{ if(typeof toast === "function") toast("Gagal simpan foto"); }catch(e){}
+    };
+  }catch(e){
+    try{ if(typeof toast === "function") toast("Gagal simpan foto"); }catch(e2){}
+  }
 }
 
 function loadPhotos(){
