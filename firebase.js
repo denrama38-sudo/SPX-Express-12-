@@ -110,15 +110,18 @@
         // multiple tabs / unsupported — ignore
       }
 
-      // Handle redirect result (masih di-support kalau ada)
+      // Handle redirect result (setelah user pilih akun Google)
       try {
         var result = await auth.getRedirectResult();
         if (result && result.user) {
           currentUser = result.user;
           await ensureUserProfile(result.user);
+          try { localStorage.setItem("spxexp12_v2_last_auth_err", ""); } catch (e0) {}
         }
       } catch (e) {
         console.warn("[SPX Firebase] getRedirectResult", e);
+        var msg = (e && (e.code || e.message)) || String(e);
+        try { localStorage.setItem("spxexp12_v2_last_auth_err", msg); } catch (e1) {}
       }
 
       auth.onAuthStateChanged(async function (user) {
@@ -258,6 +261,20 @@
     signInWithGoogle: signInWithGoogle,
     signInWithGooglePopup: signInWithGooglePopup,
     signInWithGoogleRedirect: signInWithGoogleRedirect,
+    checkRedirectResult: function () {
+      if (!auth) return Promise.resolve(null);
+      return auth.getRedirectResult().then(function (result) {
+        if (result && result.user) {
+          currentUser = result.user;
+          return ensureUserProfile(result.user).then(function () { return result.user; });
+        }
+        return null;
+      }).catch(function (e) {
+        var msg = (e && (e.code || e.message)) || String(e);
+        try { localStorage.setItem("spxexp12_v2_last_auth_err", msg); } catch (e1) {}
+        return null;
+      });
+    },
     signOut: signOut,
     onAuth: onAuth,
     waitAuthReady: waitAuthReady,

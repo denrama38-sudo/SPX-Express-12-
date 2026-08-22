@@ -663,17 +663,66 @@
       hideGoogleLoginOverlay();
     });
 
-    // Dipanggil dari MainActivity saat halaman app selesai load
+    // Dipanggil dari MainActivity saat halaman app selesai load (setelah redirect Google)
     window.spxOnAppPageReady = function () {
+      var pending = false;
+      try { pending = localStorage.getItem("spxexp12_v2_login_pending") === "1"; } catch (e) {}
+
+      function onUser(user) {
+        if (!user) return false;
+        try { localStorage.removeItem("spxexp12_v2_login_pending"); } catch (e) {}
+        try { localStorage.removeItem("spxexp12_v2_last_auth_err"); } catch (e) {}
+        markLoginOk();
+        mirrorSessionForLegacy(user);
+        hideGoogleLoginOverlay();
+        updateFirebaseUI(user);
+        installSaveHook();
+        toast("Login Google berhasil");
+        try { if (typeof updateSettingsCard === "function") updateSettingsCard(); } catch (e) {}
+        setTimeout(function () { afterLogin(user); }, 500);
+        return true;
+      }
+
       try {
         if (window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()) {
-          markLoginOk();
-          mirrorSessionForLegacy(window.spxFirebase.currentUser);
-          hideGoogleLoginOverlay();
-          updateFirebaseUI(window.spxFirebase.currentUser);
-          if (typeof updateSettingsCard === "function") updateSettingsCard();
+          onUser(window.spxFirebase.currentUser);
+          return;
         }
       } catch (e) {}
+
+      if (!pending) return;
+
+      // Poll auth + checkRedirectResult sampai 8 detik
+      var tries = 0;
+      var iv = setInterval(function () {
+        tries++;
+        try {
+          if (window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()) {
+            clearInterval(iv);
+            onUser(window.spxFirebase.currentUser);
+            return;
+          }
+          if (tries === 2 && window.spxFirebase && window.spxFirebase.checkRedirectResult) {
+            window.spxFirebase.checkRedirectResult().then(function (u) {
+              if (u) { clearInterval(iv); onUser(u); }
+            });
+          }
+        } catch (e) {}
+        if (tries >= 20) {
+          clearInterval(iv);
+          try { localStorage.removeItem("spxexp12_v2_login_pending"); } catch (e) {}
+          var errMsg = "";
+          try { errMsg = localStorage.getItem("spxexp12_v2_last_auth_err") || ""; } catch (e) {}
+          hideGoogleLoginOverlay();
+          if (errMsg.indexOf("unauthorized-domain") >= 0) {
+            toast("Domain belum diizinkan di Firebase. Tambahkan denrama38-sudo.github.io di Authorized domains.");
+          } else if (errMsg) {
+            toast("Login gagal: " + errMsg.slice(0, 80));
+          } else {
+            toast("Login Google gagal. Cek Firebase Authorized domains + internet, coba lagi.");
+          }
+        }
+      }, 400);
     };
 
     window.spxFirebase.onAuth(function (user) {
