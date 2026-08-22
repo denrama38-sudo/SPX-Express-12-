@@ -241,7 +241,7 @@
         if (typeof google !== "undefined" && google.accounts && google.accounts.oauth2) {
           clearInterval(iv);
           cb(true);
-        } else if (n >= 50) {
+        } else if (n >= 20) {
           clearInterval(iv);
           cb(false);
         }
@@ -252,10 +252,31 @@
       if (st) st.textContent = "Menyiapkan Google...";
       loadGsiScript(function (ok) {
         if (!ok) {
-          if (st) st.textContent = "";
-          if (err) {
-            err.innerHTML = "Google script belum siap di WebView.<br>Pastikan internet aktif, atau tekan tombol di bawah.";
-            err.style.display = "block";
+          // GIS gagal di WebView → pakai Firebase redirect (buka halaman Google di WebView yang sama)
+          if (st) st.textContent = "Membuka halaman Google...";
+          if (err) { err.style.display = "none"; err.textContent = ""; }
+          try {
+            localStorage.setItem("spxexp12_v2_login_pending", "1");
+          } catch (e) {}
+          if (window.spxFirebase && window.spxFirebase.signInWithGoogle) {
+            window.spxFirebase.signInWithGoogle().catch(function (e2) {
+              console.error("redirect fail", e2);
+              if (st) st.textContent = "";
+              if (err) {
+                err.innerHTML = "Gagal buka Google. Cek internet lalu coba lagi.<br><button type='button' id='spxRetryGoogleBtn' style='margin-top:10px;padding:10px;width:100%;border:0;border-radius:10px;background:#4285f4;color:#fff;font-weight:700'>Coba Lagi</button>";
+                err.style.display = "block";
+                setTimeout(function () {
+                  var b = document.getElementById("spxRetryGoogleBtn");
+                  if (b) b.onclick = function () { tryGisTokenLogin(); };
+                }, 50);
+              }
+            });
+          } else {
+            if (st) st.textContent = "";
+            if (err) {
+              err.textContent = "Firebase belum siap. Tutup app, pastikan internet, buka lagi.";
+              err.style.display = "block";
+            }
           }
           return;
         }
