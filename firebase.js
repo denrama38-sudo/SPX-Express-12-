@@ -179,21 +179,11 @@
       prompt: 'select_account'
     });
 
-    // Pakai POPUP (lebih stabil di Android WebView daripada Redirect)
-    return auth.signInWithPopup(provider).then(function (result) {
-      currentUser = result.user;
-      return ensureUserProfile(result.user).then(function () {
-        return result.user;
-      });
-    });
+    // REDIRECT — lebih cocok di Android WebView (popup sering "Login dibatalkan")
+    return auth.signInWithRedirect(provider);
   }
 
   function signInWithGooglePopup() {
-    // Alias yang sama
-    return signInWithGoogle();
-  }
-
-  function signInWithGoogleRedirect() {
     if (!auth) {
       return Promise.reject(new Error("Firebase belum siap / config belum diisi"));
     }
@@ -203,7 +193,16 @@
     provider.setCustomParameters({
       prompt: 'select_account'
     });
-    return auth.signInWithRedirect(provider);
+    return auth.signInWithPopup(provider).then(function (result) {
+      currentUser = result.user;
+      return ensureUserProfile(result.user).then(function () {
+        return result.user;
+      });
+    });
+  }
+
+  function signInWithGoogleRedirect() {
+    return signInWithGoogle();
   }
 
   function signOut() {
