@@ -56,11 +56,11 @@
 
 
   function markLoginOk() {
-    markLoginOk();
+    window.__spxLoginOk = true;
     try { localStorage.setItem(KEY_LOGIN_OK, "1"); } catch (e) {}
   }
   function clearLoginOk() {
-    clearLoginOk();
+    window.__spxLoginOk = false;
     try { localStorage.removeItem(KEY_LOGIN_OK); } catch (e) {}
   }
   function isLoginOk() {
