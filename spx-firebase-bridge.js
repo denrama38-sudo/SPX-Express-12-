@@ -117,6 +117,7 @@
     hideSplash();
     hideGoogleLoginOverlay();
     updateFirebaseUI(user || null);
+    try { if (typeof updateSettingsCard === "function") updateSettingsCard(); } catch (e) {}
     try {
       if (typeof window.go === "function") window.go("home");
       else if (typeof go === "function") go("home");

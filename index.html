@@ -1469,7 +1469,7 @@ body.spx-google-locked #spxGoogleLogin{visibility:visible !important;pointer-eve
   </div>
 
   <div class="card" id="spxGoogleSettingsCard">
-    <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:#94a3b8">Akun Google</div>
+    <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:#94a3b8">Akun Google (Backup Cloud)</div>
     <div class="spx-g-account" id="spxGAccountRow">
       <img id="spxGAvatar" src="" alt="" style="display:none">
       <div class="spx-g-info">
@@ -1477,9 +1477,16 @@ body.spx-google-locked #spxGoogleLogin{visibility:visible !important;pointer-eve
         <span id="spxGEmail">—</span>
       </div>
     </div>
-    <div class="spx-g-sync" id="spxGSyncStatus">Backup real-time: menunggu login</div>
-    <button type="button" class="btn btn3 btn-sm" style="margin:12px 0 0;width:100%;font-size:13px" id="spxGoogleLogoutBtn" onclick="spxGoogleSignOut()">Keluar dari Akun Google</button>
-    <div class="muted" style="font-size:11px;margin-top:8px;line-height:1.4">Keluar akan menghentikan backup otomatis ke Drive. Data lokal tetap ada. Login ulang diperlukan untuk masuk aplikasi.</div>
+    <div class="spx-g-sync" id="spxGSyncStatus">Backup lokal aktif · Login Google opsional untuk sync cloud</div>
+    <button type="button" id="spxGoogleLoginBtn" onclick="spxLoginFromSettings()"
+      style="margin:12px 0 0;width:100%;font-size:14px;font-weight:700;padding:12px 16px;border:0;border-radius:12px;background:#4285f4;color:#fff;cursor:pointer">
+      Masuk dengan Google
+    </button>
+    <button type="button" id="spxGoogleLogoutBtn" onclick="spxGoogleSignOut()"
+      style="margin:8px 0 0;width:100%;font-size:13px;font-weight:600;padding:10px 16px;border:0;border-radius:12px;background:#ef4444;color:#fff;cursor:pointer;display:none">
+      Keluar dari Akun Google
+    </button>
+    <div class="muted" style="font-size:11px;margin-top:8px;line-height:1.4">App bisa dipakai tanpa Google (data di HP). Login untuk sinkronisasi data & pengaturan ke cloud.</div>
   </div>
 </div>
 
