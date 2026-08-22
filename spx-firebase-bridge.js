@@ -343,23 +343,23 @@
       } catch (e) {}
     }
 
-    // Deteksi WebView Android app
-    var ua = navigator.userAgent || "";
-    var isAppWebView = /SPXExpress12Android|; wv\)|WebView/i.test(ua);
-
-    // Di WebView: langsung GIS (lebih andal). Di browser: coba Firebase dulu.
-    if (isAppWebView || !window.spxFirebase) {
+    // Prioritas: Firebase POPUP (MainActivity buka dialog Google).
+    // Fallback: GIS token, lalu redirect.
+    if (!window.spxFirebase) {
       tryGisTokenLogin();
       return;
     }
-
     if (window.spxFirebase.isConfigPlaceholder && window.spxFirebase.isConfigPlaceholder()) {
       tryGisTokenLogin();
       return;
     }
 
+    if (st) st.textContent = "Membuka Google...";
+    try { localStorage.setItem("spxexp12_v2_login_pending", "1"); } catch (e) {}
+
     window.spxFirebase.signInWithGooglePopup()
       .then(function (user) {
+        try { localStorage.removeItem("spxexp12_v2_login_pending"); } catch (e) {}
         if (st) st.textContent = "";
         markLoginOk();
         mirrorSessionForLegacy(user);
@@ -367,9 +367,10 @@
         toast("Masuk sebagai " + (user.email || user.displayName || "user"));
         installSaveHook();
         setTimeout(function () { afterLogin(user); }, 500);
+        try { if (typeof updateSettingsCard === "function") updateSettingsCard(); } catch (e) {}
       })
       .catch(function (e1) {
-        console.warn("Firebase popup gagal, fallback GIS", e1);
+        console.warn("Firebase popup gagal, coba GIS/redirect", e1);
         tryGisTokenLogin();
       });
   };
