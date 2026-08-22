@@ -1072,7 +1072,6 @@ body.spx-google-locked #spxGoogleLogin{visibility:visible !important;pointer-eve
     </button>
   </div>
 </div>
-</div>
 
 <script>
 /* SPX DEVICE LOCK — aktivasi sekali di awal (tersimpan sampai uninstall) */
@@ -5135,11 +5134,42 @@ try{ genRenderFields(); }catch(e){}
   }
   function hideGoogleLogin(){
     var sc = $("spxGoogleLogin");
+    var wasLocked = false;
+    try{
+      wasLocked = document.body.classList.contains("spx-google-locked") ||
+        (sc && sc.classList.contains("spx-show"));
+    }catch(e){}
     if(sc){
       sc.classList.remove("spx-show");
-      sc.style.display = "none";
+      try{ sc.style.setProperty("display","none","important"); }catch(e){ sc.style.display="none"; }
+      sc.style.visibility = "hidden";
+      sc.style.pointerEvents = "none";
     }
-    document.body.classList.remove("spx-google-locked");
+    // Lepas semua kunci yang bikin layar blank putih
+    try{
+      document.body.classList.remove("spx-google-locked");
+      document.body.classList.remove("spx-locked");
+      document.body.style.background = "#0a0a0a";
+      document.body.style.visibility = "visible";
+      document.body.style.opacity = "1";
+    }catch(e){}
+    // Pastikan splash & lock juga mati
+    try{
+      var splash = $("spxSplash");
+      if(splash){
+        splash.classList.add("spx-hide");
+        splash.style.setProperty("display","none","important");
+      }
+      var lock = $("spxLockScreen");
+      if(lock && localStorage.getItem("spxexp12_v2_on")==="1"){
+        lock.classList.remove("spx-show");
+        lock.style.setProperty("display","none","important");
+      }
+    }catch(e){}
+    // Hanya paksa home saat baru keluar dari layar login
+    if(wasLocked){
+      try{ if(typeof go === "function") go("home"); }catch(e){}
+    }
   }
 
   function updateSettingsCard(){

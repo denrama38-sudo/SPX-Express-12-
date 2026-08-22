@@ -65,13 +65,49 @@
 
   function hideGoogleLoginOverlay() {
     var sc = $("spxGoogleLogin");
+    var wasLocked = false;
+    try {
+      wasLocked = document.body.classList.contains("spx-google-locked") ||
+        (sc && sc.classList.contains("spx-show"));
+    } catch (e) {}
+
     if (sc) {
       sc.classList.remove("spx-show");
-      sc.style.setProperty("display", "none", "important");
+      try {
+        sc.style.setProperty("display", "none", "important");
+      } catch (e) {
+        sc.style.display = "none";
+      }
       sc.style.visibility = "hidden";
       sc.style.pointerEvents = "none";
     }
-    document.body.classList.remove("spx-google-locked");
+    // Cegah blank putih: lepas semua lock body + pastikan app terlihat
+    try {
+      document.body.classList.remove("spx-google-locked");
+      document.body.classList.remove("spx-locked");
+      document.body.style.background = "#0a0a0a";
+      document.body.style.visibility = "visible";
+      document.body.style.opacity = "1";
+    } catch (e) {}
+    try {
+      var splash = $("spxSplash");
+      if (splash) {
+        splash.classList.add("spx-hide");
+        splash.style.setProperty("display", "none", "important");
+      }
+      var lock = $("spxLockScreen");
+      if (lock && localStorage.getItem(KEY_ON) === "1") {
+        lock.classList.remove("spx-show");
+        lock.style.setProperty("display", "none", "important");
+      }
+    } catch (e) {}
+    // Hanya paksa home SAAT baru lepas dari layar login (bukan tiap 300ms)
+    if (wasLocked) {
+      try {
+        if (typeof window.go === "function") window.go("home");
+        else if (typeof go === "function") go("home");
+      } catch (e) {}
+    }
   }
 
   function showGoogleLoginOverlay() {
