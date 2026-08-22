@@ -19,6 +19,7 @@
   var KEY_G_USER = "spxexp12_v2_guser";
   var KEY_G_TOKEN = "spxexp12_v2_gtoken";
   var KEY_FB_SESSION = "spxexp12_v2_fb_session";
+  var KEY_LOGIN_OK = "spxexp12_v2_login_ok";
 
   function $(id) { return document.getElementById(id); }
 
@@ -53,6 +54,52 @@
     }
   }
 
+
+  function markLoginOk() {
+    markLoginOk();
+    try { localStorage.setItem(KEY_LOGIN_OK, "1"); } catch (e) {}
+  }
+  function clearLoginOk() {
+    clearLoginOk();
+    try { localStorage.removeItem(KEY_LOGIN_OK); } catch (e) {}
+  }
+  function isLoginOk() {
+    if (window.__spxLoginOk) return true;
+    try {
+      if (localStorage.getItem(KEY_LOGIN_OK) === "1") {
+        markLoginOk();
+        return true;
+      }
+    } catch (e) {}
+    try {
+      if (window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()) {
+        markLoginOk();
+        return true;
+      }
+    } catch (e) {}
+    try {
+      var tok = localStorage.getItem(KEY_G_TOKEN) || "";
+      if (tok.indexOf("firebase-session:") === 0) { markLoginOk(); return true; }
+      if (localStorage.getItem(KEY_FB_SESSION) === "1") { markLoginOk(); return true; }
+      if (localStorage.getItem(KEY_G_USER)) { markLoginOk(); return true; }
+    } catch (e) {}
+    return false;
+  }
+  /** Paksa tutup overlay login — dipanggil berkala agar tidak bisa muncul lagi setelah login */
+  function enforceHideLoginIfOk() {
+    if (!isLoginOk()) return;
+    try {
+      var sc = $("spxGoogleLogin");
+      if (sc) {
+        sc.classList.remove("spx-show");
+        sc.style.setProperty("display", "none", "important");
+        sc.style.visibility = "hidden";
+        sc.style.pointerEvents = "none";
+      }
+      document.body.classList.remove("spx-google-locked");
+    } catch (e) {}
+  }
+
   function clearLegacySession() {
     try {
       localStorage.removeItem(KEY_G_USER);
@@ -60,65 +107,50 @@
       localStorage.removeItem(KEY_FB_UID);
       localStorage.removeItem(KEY_FB_SESSION);
       localStorage.removeItem("spxexp12_v2_gfile");
+      clearLoginOk();
     } catch (e) {}
   }
 
   function hideGoogleLoginOverlay() {
     var sc = $("spxGoogleLogin");
-    var wasLocked = false;
-    try {
-      wasLocked = document.body.classList.contains("spx-google-locked") ||
-        (sc && sc.classList.contains("spx-show"));
-    } catch (e) {}
-
     if (sc) {
       sc.classList.remove("spx-show");
-      try {
-        sc.style.setProperty("display", "none", "important");
-      } catch (e) {
-        sc.style.display = "none";
-      }
+      try { sc.style.setProperty("display", "none", "important"); } catch (e) { sc.style.display = "none"; }
       sc.style.visibility = "hidden";
       sc.style.pointerEvents = "none";
     }
-    // Cegah blank putih: lepas semua lock body + pastikan app terlihat
+    document.body.classList.remove("spx-google-locked");
+    // Jika Firebase sudah login, kunci agar overlay tidak muncul lagi
     try {
-      document.body.classList.remove("spx-google-locked");
-      document.body.classList.remove("spx-locked");
-      document.body.style.background = "#0a0a0a";
-      document.body.style.visibility = "visible";
-      document.body.style.opacity = "1";
-    } catch (e) {}
-    try {
-      var splash = $("spxSplash");
-      if (splash) {
-        splash.classList.add("spx-hide");
-        splash.style.setProperty("display", "none", "important");
+      if (window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()) {
+        markLoginOk();
       }
-      var lock = $("spxLockScreen");
-      if (lock && localStorage.getItem(KEY_ON) === "1") {
-        lock.classList.remove("spx-show");
-        lock.style.setProperty("display", "none", "important");
+      if ((localStorage.getItem(KEY_G_TOKEN) || "").indexOf("firebase-session:") === 0) {
+        markLoginOk();
       }
     } catch (e) {}
-    // Hanya paksa home SAAT baru lepas dari layar login (bukan tiap 300ms)
-    if (wasLocked) {
-      try {
-        if (typeof window.spxForceShowApp === "function") window.spxForceShowApp();
-        else if (typeof window.go === "function") window.go("home");
-        else if (typeof go === "function") go("home");
-      } catch (e) {}
-    }
   }
 
   function showGoogleLoginOverlay() {
-    if (window.spxFirebase && window.spxFirebase.isLoggedIn()) {
+    // Sudah login / ada sesi → JANGAN tampil login (ini yang cegah loop)
+    if (isLoginOk()) {
+      hideGoogleLoginOverlay();
+      enforceHideLoginIfOk();
+      return;
+    }
+    if (window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()) {
+      markLoginOk();
       hideGoogleLoginOverlay();
       return;
     }
-    if (localStorage.getItem(KEY_FB_SESSION) === "1" && localStorage.getItem(KEY_FB_UID)) {
+    // Ada sesi tersimpan → tunggu restore Firebase, jangan paksa login
+    if (localStorage.getItem(KEY_FB_SESSION) === "1" || localStorage.getItem(KEY_FB_UID)) {
       return;
     }
+    var tok = "";
+    try { tok = localStorage.getItem(KEY_G_TOKEN) || ""; } catch (e) {}
+    if (tok.indexOf("firebase-session:") === 0) { markLoginOk(); return; }
+
     var sc = $("spxGoogleLogin");
     if (!sc) return;
     document.body.classList.add("spx-google-locked");
@@ -258,6 +290,7 @@
 
     function onSuccess(user) {
       if (st) st.textContent = "";
+      markLoginOk();
       mirrorSessionForLegacy(user);
       hideGoogleLoginOverlay();
       updateFirebaseUI(user);
@@ -316,6 +349,7 @@
       var finish = function () {
         var pr = window.spxFirebase ? window.spxFirebase.signOut() : Promise.resolve();
         pr.then(function () {
+          clearLoginOk();
           clearLegacySession();
           updateFirebaseUI(null);
           toast("Berhasil keluar");
@@ -530,16 +564,20 @@
   }
 
   function patchLegacyLoginCalls() {
+    // Penjaga ketat: tiap 400ms, jika sudah login → paksa tutup overlay
     setInterval(function () {
       try {
-        if (window.spxFirebase && window.spxFirebase.isLoggedIn()) {
-          hideGoogleLoginOverlay();
+        if (window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()) {
+          markLoginOk();
           mirrorSessionForLegacy(window.spxFirebase.currentUser);
-          // Pastikan body tidak terkunci di layar login
-          document.body.classList.remove("spx-google-locked");
+          enforceHideLoginIfOk();
+          return;
+        }
+        if (isLoginOk()) {
+          enforceHideLoginIfOk();
         }
       } catch (e) {}
-    }, 300);
+    }, 400);
   }
 
   function bootBridge() {
@@ -561,6 +599,7 @@
       hideSplash();
 
       if (user) {
+        markLoginOk();
         mirrorSessionForLegacy(user);
         hideGoogleLoginOverlay();
         updateFirebaseUI(user);
@@ -569,27 +608,60 @@
         setTimeout(hideGoogleLoginOverlay, 500);
         setTimeout(function () { afterLogin(user); }, 600);
       } else {
-        if (localStorage.getItem(KEY_FB_SESSION) === "1") {
-          clearLegacySession();
-        }
+        // JANGAN clear session segera — Firebase WebView sering restore auth terlambat
+        // Hanya tampilkan login jika benar-benar belum ada sesi
         updateFirebaseUI(null);
         if (isActivated()) {
           setTimeout(function () {
-            if (!window.spxFirebase.isLoggedIn()) {
-              showGoogleLoginOverlay();
+            try {
+              if (window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()) {
+                markLoginOk();
+                mirrorSessionForLegacy(window.spxFirebase.currentUser);
+                hideGoogleLoginOverlay();
+                return;
+              }
+            } catch (e) {}
+            // Masih ada marker sesi? tunggu lagi, jangan hapus / jangan paksa login
+            var hasSesi = false;
+            try {
+              hasSesi = localStorage.getItem(KEY_FB_SESSION) === "1"
+                || !!localStorage.getItem(KEY_FB_UID)
+                || (localStorage.getItem(KEY_G_TOKEN) || "").indexOf("firebase-session:") === 0
+                || !!localStorage.getItem(KEY_G_USER);
+            } catch (e2) {}
+            if (hasSesi) {
+              // Tunggu restore lebih lama
+              setTimeout(function () {
+                try {
+                  if (window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()) {
+                    markLoginOk();
+                    mirrorSessionForLegacy(window.spxFirebase.currentUser);
+                    hideGoogleLoginOverlay();
+                    return;
+                  }
+                } catch (e3) {}
+                // Baru setelah gagal restore → clear & minta login
+                clearLegacySession();
+                clearLoginOk();
+                showGoogleLoginOverlay();
+              }, 2500);
+              return;
             }
-          }, 1200);
+            showGoogleLoginOverlay();
+          }, 1500);
         }
       }
     });
 
     window.spxFirebase.onAuth(function (user) {
       if (user) {
+        markLoginOk();
         mirrorSessionForLegacy(user);
         hideGoogleLoginOverlay();
         updateFirebaseUI(user);
         installSaveHook();
       } else {
+        // Jangan clear / jangan show login di sini — bisa race saat restore
         updateFirebaseUI(null);
       }
     });

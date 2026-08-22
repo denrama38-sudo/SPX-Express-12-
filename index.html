@@ -968,7 +968,7 @@ body.spx-locked #spxLockScreen{
   color:#ef4444;font-size:13px;margin-top:8px;display:none;font-weight:600;
 }
 
-/* Overlay login fixed fullscreen — jangan hide children (penyebab blank putih setelah login) */
+/* Overlay fixed fullscreen — jangan hide children (cegah blank / flicker) */
 body.spx-google-locked #spxGoogleLogin{visibility:visible !important;pointer-events:auto !important;z-index:2147483000 !important}
 
 .spx-g-account{
@@ -1039,6 +1039,23 @@ body.spx-google-locked #spxGoogleLogin{visibility:visible !important;pointer-eve
         lock.style.display="none";
       }
       document.body.classList.remove("spx-locked");
+      // Cegah flash home: jika belum ada sesi Google, kunci ke layar login segera
+      var hasSesi=false;
+      try{
+        hasSesi = localStorage.getItem("spxexp12_v2_fb_session")==="1"
+          || !!localStorage.getItem("spxexp12_v2_fb_uid")
+          || (localStorage.getItem("spxexp12_v2_gtoken")||"").indexOf("firebase-session:")===0
+          || !!localStorage.getItem("spxexp12_v2_guser");
+      }catch(e2){}
+      if(hasSesi){ window.__spxLoginOk = true; }
+      else {
+        var gl=document.getElementById("spxGoogleLogin");
+        if(gl){
+          document.body.classList.add("spx-google-locked");
+          gl.classList.add("spx-show");
+          gl.style.display="flex";
+        }
+      }
     }
   }catch(e){}
 })();
@@ -1069,6 +1086,7 @@ body.spx-google-locked #spxGoogleLogin{visibility:visible !important;pointer-eve
       Masuk Tanpa Google (Sementara)
     </button>
   </div>
+</div>
 </div>
 
 <script>
@@ -5113,12 +5131,18 @@ try{ genRenderFields(); }catch(e){}
   }
 
   function showGoogleLogin(){
-    // Jangan tampilkan login jika Firebase sudah login
+    // Sticky + sesi (localStorage) — cegah loop balik ke login
     try{
-      if(window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()) return;
+      if(window.__spxLoginOk) return;
+      if(localStorage.getItem("spxexp12_v2_login_ok")==="1"){ window.__spxLoginOk=true; return; }
+      if(window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()){
+        window.__spxLoginOk=true; localStorage.setItem("spxexp12_v2_login_ok","1"); return;
+      }
       if(localStorage.getItem("spxexp12_v2_fb_session")==="1") return;
+      if(localStorage.getItem("spxexp12_v2_fb_uid")) return;
       var tok = localStorage.getItem("spxexp12_v2_gtoken")||"";
       if(tok.indexOf("firebase-session:")===0) return;
+      if(localStorage.getItem(KEY_G_USER)) return;
     }catch(e){}
     var sc = $("spxGoogleLogin");
     if(!sc) return;
@@ -5132,42 +5156,23 @@ try{ genRenderFields(); }catch(e){}
   }
   function hideGoogleLogin(){
     var sc = $("spxGoogleLogin");
-    var wasLocked = false;
-    try{
-      wasLocked = document.body.classList.contains("spx-google-locked") ||
-        (sc && sc.classList.contains("spx-show"));
-    }catch(e){}
     if(sc){
       sc.classList.remove("spx-show");
       try{ sc.style.setProperty("display","none","important"); }catch(e){ sc.style.display="none"; }
       sc.style.visibility = "hidden";
-      sc.style.pointerEvents = "none";
     }
-    // Lepas semua kunci yang bikin layar blank putih
+    document.body.classList.remove("spx-google-locked");
     try{
-      document.body.classList.remove("spx-google-locked");
-      document.body.classList.remove("spx-locked");
-      document.body.style.background = "#0a0a0a";
-      document.body.style.visibility = "visible";
-      document.body.style.opacity = "1";
-    }catch(e){}
-    // Pastikan splash & lock juga mati
-    try{
-      var splash = $("spxSplash");
-      if(splash){
-        splash.classList.add("spx-hide");
-        splash.style.setProperty("display","none","important");
+      if(window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()){
+        window.__spxLoginOk = true;
+        localStorage.setItem("spxexp12_v2_login_ok","1");
       }
-      var lock = $("spxLockScreen");
-      if(lock && localStorage.getItem("spxexp12_v2_on")==="1"){
-        lock.classList.remove("spx-show");
-        lock.style.setProperty("display","none","important");
+      var tok = localStorage.getItem("spxexp12_v2_gtoken")||"";
+      if(tok.indexOf("firebase-session:")===0){
+        window.__spxLoginOk = true;
+        localStorage.setItem("spxexp12_v2_login_ok","1");
       }
     }catch(e){}
-    // Hanya paksa home saat baru keluar dari layar login
-    if(wasLocked){
-      try{ if(typeof go === "function") go("home"); }catch(e){}
-    }
   }
 
   function updateSettingsCard(){
@@ -5259,6 +5264,8 @@ try{ genRenderFields(); }catch(e){}
             localStorage.setItem(KEY_G_TOKEN, "firebase-session:"+user.uid);
             localStorage.setItem("spxexp12_v2_fb_session","1");
             localStorage.setItem("spxexp12_v2_fb_uid", user.uid);
+            window.__spxLoginOk = true;
+            try{ localStorage.setItem("spxexp12_v2_login_ok","1"); }catch(e3){}
           }catch(e){}
           hideGoogleLogin();
           updateSettingsCard();
@@ -5341,6 +5348,8 @@ try{ genRenderFields(); }catch(e){}
     activationHandled = false;
     localStorage.removeItem(KEY_G_TOKEN);
     localStorage.removeItem(KEY_G_FILE);
+    try{ localStorage.removeItem("spxexp12_v2_login_ok"); localStorage.removeItem("spxexp12_v2_fb_session"); localStorage.removeItem("spxexp12_v2_fb_uid"); }catch(e){}
+    window.__spxLoginOk = false;
     setUser(null);
     updateSettingsCard();
     try{ if(typeof toast === "function") toast("Berhasil keluar dari akun Google"); }catch(e){}
@@ -5580,13 +5589,20 @@ try{ genRenderFields(); }catch(e){}
       installSaveHook();
       setTimeout(function(){ doGoogleBackup(); }, 1500);
     } else {
-      // Biarkan bridge Firebase yang menampilkan login (jeda)
+      // Biarkan bridge Firebase yang menampilkan login (jeda lebih lama, cegah loop)
       setTimeout(function(){
         try{
-          if(window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()) return;
+          if(window.__spxLoginOk) return;
+          if(window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()){
+            window.__spxLoginOk = true;
+            hideGoogleLogin();
+            return;
+          }
+          if(localStorage.getItem("spxexp12_v2_fb_session")==="1") return;
+          if((localStorage.getItem("spxexp12_v2_gtoken")||"").indexOf("firebase-session:")===0) return;
         }catch(e){}
         showGoogleLogin();
-      }, 900);
+      }, 1800);
     }
   }
 
@@ -5879,59 +5895,39 @@ try{ genRenderFields(); }catch(e){}
 
 
 <script>
-/* RECOVERY: jika setelah login konten masih blank, paksa tampilkan app */
+/* PENJAGA LOGIN LOOP — jika sudah ada sesi, overlay Google TIDAK boleh muncul */
 (function(){
-  function forceShowApp(){
+  function hasSesi(){
     try{
-      document.body.classList.remove("spx-google-locked");
-      document.body.classList.remove("spx-locked");
-      document.body.style.background = "#0a0a0a";
-      document.body.style.visibility = "visible";
-      document.body.style.opacity = "1";
-      var sc = document.getElementById("spxGoogleLogin");
-      if(sc){
-        var logged = false;
-        try{
-          logged = (window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn())
-            || localStorage.getItem("spxexp12_v2_fb_session")==="1"
-            || (localStorage.getItem("spxexp12_v2_gtoken")||"").indexOf("firebase-session:")===0
-            || !!localStorage.getItem("spxexp12_v2_guser");
-        }catch(e){}
-        if(logged){
-          sc.classList.remove("spx-show");
-          sc.style.setProperty("display","none","important");
-          sc.style.visibility = "hidden";
-        }
-      }
-      var splash = document.getElementById("spxSplash");
-      if(splash){ splash.classList.add("spx-hide"); splash.style.setProperty("display","none","important"); }
-      var lock = document.getElementById("spxLockScreen");
-      if(lock && localStorage.getItem("spxexp12_v2_on")==="1"){
-        lock.classList.remove("spx-show");
-        lock.style.setProperty("display","none","important");
-      }
-      var home = document.getElementById("home");
-      if(home){
-        home.className = "page on";
-        home.style.visibility = "visible";
-        home.style.display = "block";
-        home.style.opacity = "1";
-      }
-      if(typeof go === "function"){
-        try{ go("home"); }catch(e){}
-      }
-    }catch(e){ console.warn("forceShowApp", e); }
+      if(window.__spxLoginOk) return true;
+      if(localStorage.getItem("spxexp12_v2_login_ok")==="1") return true;
+      if(localStorage.getItem("spxexp12_v2_fb_session")==="1") return true;
+      if(localStorage.getItem("spxexp12_v2_fb_uid")) return true;
+      var t=localStorage.getItem("spxexp12_v2_gtoken")||"";
+      if(t.indexOf("firebase-session:")===0) return true;
+      if(localStorage.getItem("spxexp12_v2_guser")) return true;
+      if(window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn()) return true;
+    }catch(e){}
+    return false;
   }
-  // Jalankan berkala singkat setelah load (cover race login)
-  setTimeout(forceShowApp, 800);
-  setTimeout(forceShowApp, 2000);
-  setTimeout(forceShowApp, 4000);
-  setTimeout(forceShowApp, 7000);
-  window.spxForceShowApp = forceShowApp;
-  // Jika Firebase bilang sudah login, paksa show
-  document.addEventListener("DOMContentLoaded", function(){
-    setTimeout(forceShowApp, 500);
-  });
+  function forceHideLogin(){
+    if(!hasSesi()) return;
+    window.__spxLoginOk = true;
+    try{ localStorage.setItem("spxexp12_v2_login_ok","1"); }catch(e){}
+    var sc=document.getElementById("spxGoogleLogin");
+    if(sc){
+      sc.classList.remove("spx-show");
+      try{ sc.style.setProperty("display","none","important"); }catch(e){ sc.style.display="none"; }
+      sc.style.visibility="hidden";
+      sc.style.pointerEvents="none";
+    }
+    try{ document.body.classList.remove("spx-google-locked"); }catch(e){}
+  }
+  setInterval(forceHideLogin, 400);
+  setTimeout(forceHideLogin, 300);
+  setTimeout(forceHideLogin, 1000);
+  setTimeout(forceHideLogin, 2500);
+  window.spxForceHideLogin = forceHideLogin;
 })();
 </script>
 
