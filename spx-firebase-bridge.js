@@ -104,7 +104,8 @@
     // Hanya paksa home SAAT baru lepas dari layar login (bukan tiap 300ms)
     if (wasLocked) {
       try {
-        if (typeof window.go === "function") window.go("home");
+        if (typeof window.spxForceShowApp === "function") window.spxForceShowApp();
+        else if (typeof window.go === "function") window.go("home");
         else if (typeof go === "function") go("home");
       } catch (e) {}
     }

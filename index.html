@@ -968,10 +968,8 @@ body.spx-locked #spxLockScreen{
   color:#ef4444;font-size:13px;margin-top:8px;display:none;font-weight:600;
 }
 
-body.spx-google-locked > *:not(#spxGoogleLogin):not(#spxLockScreen):not(#spxSplash):not(script){
-  visibility:hidden !important;pointer-events:none !important;
-}
-body.spx-google-locked #spxGoogleLogin{visibility:visible !important;pointer-events:auto !important}
+/* Overlay login fixed fullscreen — jangan hide children (penyebab blank putih setelah login) */
+body.spx-google-locked #spxGoogleLogin{visibility:visible !important;pointer-events:auto !important;z-index:2147483000 !important}
 
 .spx-g-account{
   display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #2a2a2a;margin-bottom:12px;
@@ -5876,6 +5874,64 @@ try{ genRenderFields(); }catch(e){}
     var sc = $("spxGoogleLogin");
     if(sc) obs.observe(sc, {attributes:true, attributeFilter:["class","style"]});
   }catch(e){}
+})();
+</script>
+
+
+<script>
+/* RECOVERY: jika setelah login konten masih blank, paksa tampilkan app */
+(function(){
+  function forceShowApp(){
+    try{
+      document.body.classList.remove("spx-google-locked");
+      document.body.classList.remove("spx-locked");
+      document.body.style.background = "#0a0a0a";
+      document.body.style.visibility = "visible";
+      document.body.style.opacity = "1";
+      var sc = document.getElementById("spxGoogleLogin");
+      if(sc){
+        var logged = false;
+        try{
+          logged = (window.spxFirebase && window.spxFirebase.isLoggedIn && window.spxFirebase.isLoggedIn())
+            || localStorage.getItem("spxexp12_v2_fb_session")==="1"
+            || (localStorage.getItem("spxexp12_v2_gtoken")||"").indexOf("firebase-session:")===0
+            || !!localStorage.getItem("spxexp12_v2_guser");
+        }catch(e){}
+        if(logged){
+          sc.classList.remove("spx-show");
+          sc.style.setProperty("display","none","important");
+          sc.style.visibility = "hidden";
+        }
+      }
+      var splash = document.getElementById("spxSplash");
+      if(splash){ splash.classList.add("spx-hide"); splash.style.setProperty("display","none","important"); }
+      var lock = document.getElementById("spxLockScreen");
+      if(lock && localStorage.getItem("spxexp12_v2_on")==="1"){
+        lock.classList.remove("spx-show");
+        lock.style.setProperty("display","none","important");
+      }
+      var home = document.getElementById("home");
+      if(home){
+        home.className = "page on";
+        home.style.visibility = "visible";
+        home.style.display = "block";
+        home.style.opacity = "1";
+      }
+      if(typeof go === "function"){
+        try{ go("home"); }catch(e){}
+      }
+    }catch(e){ console.warn("forceShowApp", e); }
+  }
+  // Jalankan berkala singkat setelah load (cover race login)
+  setTimeout(forceShowApp, 800);
+  setTimeout(forceShowApp, 2000);
+  setTimeout(forceShowApp, 4000);
+  setTimeout(forceShowApp, 7000);
+  window.spxForceShowApp = forceShowApp;
+  // Jika Firebase bilang sudah login, paksa show
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(forceShowApp, 500);
+  });
 })();
 </script>
 
